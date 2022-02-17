@@ -1,6 +1,5 @@
 // This is the library for the TB6612 that contains the class Motor and all the
 // functions
-#include <Arduino.h>
 #include <SparkFun_TB6612.h>
 
 // Pins for all inputs, keep in mind the PWM defines must be on PWM pins
@@ -14,6 +13,10 @@
 #define PWMB 6
 #define STBY 9
 
+//PWM channels required for ESP32
+#define PWM_CH_A 0
+#define PWM_CH_B 1
+
 // these constants are used to allow you to make your motor configuration 
 // line up with function names like forward.  Value can be 1 or -1
 const int offsetA = 1;
@@ -23,8 +26,8 @@ const int offsetB = 1;
 // motors as you have memory for.  If you are using functions like forward
 // that take 2 motors as arguements you can either write new functions or
 // call the function more than once.
-Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY);
-Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY);
+Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, PWM_CH_A);
+Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
 
 void setup()
 {
