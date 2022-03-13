@@ -45,10 +45,11 @@ Motor::Motor(int In1pin, int In2pin, int PWMpin, int offset, int STBYpin, int PW
 
 void Motor::drive(int speed)
 {
+	int speed1;
   digitalWrite(Standby, HIGH);
-  speed = speed * Offset;
-  if (speed>=0) fwd(speed);
-  else rev(-speed);
+  speed1 = speed * Offset;
+  if (speed1>=0) fwd(speed1);
+  else rev(-speed1);
 }
 void Motor::drive(int speed, int duration)
 {

@@ -57,7 +57,7 @@ class Motor
 	//(forward, back, left, and right all call drive)
 	void standby();	
 	
-  private:
+  //private:
     //variables for the 2 inputs, PWM input, Offset value, and the Standby pin
 	int In1, In2, PWM, Offset,Standby, PWM_CHANNEL;
 	
