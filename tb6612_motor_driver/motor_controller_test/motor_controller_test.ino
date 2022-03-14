@@ -7,8 +7,8 @@ const int offsetB = -1;
 Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, PWM_CH_A);
 Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
 //Motor encoder counters - update with updateEnc();
-int counter1 = 0; 
-int counter2 = 0;
+int counterL = 0; 
+int counterR = 0;
 
 int speed = 255;
 long ticktimer = millis();
@@ -26,8 +26,8 @@ void loop() {
 
   if (millis()-ticktimer > 1000)
   {
-    Serial.println(counter1);
-    Serial.println(counter2);
+    Serial.println(counterL);
+    Serial.println(counterR);
     ticktimer = millis();
     //speed = speed * (-1);
 

@@ -6,8 +6,8 @@ int a1LastState;
 int a2State;
 int a2LastState;
 //motor encoder counter variables in main file
-extern int counter1;
-extern int counter2;
+extern int counterL;
+extern int counterR;
 
 // these constants are used to allow you to make your motor configuration 
 // line up with function names like forward.  Value can be 1 or -1
@@ -18,8 +18,8 @@ extern const int offsetB;
 // motors as you have memory for.  If you are using functions like forward
 // that take 2 motors as arguements you can either write new functions or
 // call the function more than once.
-extern Motor motor1;
-extern Motor motor2;
+extern Motor motorL;
+extern Motor motorR;
 
 //extern Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, PWM_CH_A);
 //extern Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
@@ -44,9 +44,9 @@ void updateEnc()
    if (a1State != a1LastState){     
      // If the outputB state is different to the outputA state, that means the encoder is rotating clockwise
      if (digitalRead(outputB1) != a1State) { 
-       counter1 ++;
+       counterL ++;
      } else {
-       counter1 --;
+       counterL --;
      }
    } 
    a1LastState = a1State; // Updates the previous state of the outputA with the current state
@@ -57,9 +57,9 @@ void updateEnc()
    if (a2State != a2LastState){     
      // If the outputB state is different to the outputA state, that means the encoder is rotating clockwise
      if (digitalRead(outputB2) != a2State) { 
-       counter2 ++;
+       counterR ++;
      } else {
-       counter2 --;
+       counterR --;
      }
    } 
    a2LastState = a2State; // Updates the previous state of the outputA with the current state
