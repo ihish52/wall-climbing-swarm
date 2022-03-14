@@ -18,6 +18,7 @@ void setup() {
   // put your setup code here, to run once:
   setupMotors();
   Serial.begin(9600);
+  Serial.println("test");
 }
 
 void loop() {
@@ -26,11 +27,11 @@ void loop() {
 
   if (millis()-ticktimer > 1000)
   {
-    Serial.println(counterL);
+    Serial.print(counterL);
+    Serial.print(",");
     Serial.println(counterR);
     ticktimer = millis();
     //speed = speed * (-1);
-
   }
 
   //Serial.println("loop");

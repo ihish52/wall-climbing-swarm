@@ -34,6 +34,7 @@ Motor motorR = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
 //Motor encoder counters - update with updateEnc();
 int counterL = 0; 
 int counterR = 0;
+int counterAVG = 0;
 int speedL = 255;
 int speedR = 255;
 
@@ -58,19 +59,20 @@ void setup(){
 void loop(){
   updateEnc();
   //making sure encoder ticks both count up when moving forward
-  counterL = -1* counterL;
 
   //updated motor speed based on gyro angle
   updatePID();
 
-  if (millis() - timer > 0)
+  counterAVG = (abs(counterR)+abs(counterL))/2.0;
+  heading = ypr[0];
+
+  if (millis() - timer > 100)
   {
     print_acc();
     Serial.println();
     Serial.print(counterL);
     Serial.print(",");
     Serial.println(counterR);
-    heading = ypr[0];
     Serial.println();
     timer = millis();
   }
@@ -83,6 +85,9 @@ void loop(){
 
   else if (turn == true)
   {
+    counterR = 0;
+    counterL = 0;
+
     motorL.drive(FULL_SPEED);
     motorR.drive(FULL_SPEED*(-1));
 
@@ -108,7 +113,7 @@ void loop(){
     updateEnc();
   }*/
 
-  if (counterR > 400)
+  if (counterAVG > 10000)
   {
     fw = false;
     turn = true;
@@ -118,6 +123,7 @@ void loop(){
       heading_ref = -90;
     }
     counterR = 0;
+    counterL = 0;
   }
 
 
