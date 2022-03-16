@@ -7,9 +7,11 @@
 #define WIRE_H
 #include "Wire.h"
 #endif
-
-#include <DMP_helper.h>
-#include <motor_controller.h>
+#ifndef DMP_HELPER_H
+#define DMP_HELPER_H
+#include "DMP_helper.h"
+#endif
+#include "motor_controller.h"
 #include "BluetoothSerial.h"
 
 //BT serial comms
@@ -182,12 +184,12 @@ void forward(float heading_refference){
    heading_err = heading - heading_refference;
   
   //possibly the other way around
-  if (heading_err < 0)
+  if (heading_err < 5)
   {
     speedL = 255 - abs(Kd*heading_err);
     speedR = 255;
   }
-  else if (heading_err > 0)
+  else if (heading_err > 5)
   {
     speedR = 255 - abs(Kd*heading_err);
     speedL = 255;
@@ -202,12 +204,12 @@ void reverse(float heading_refference){
    heading_err = heading - heading_refference;
   
   //possibly the other way around
-  if (heading_err < 0)
+  if (heading_err < 5)
   {
     speedL = -255 + abs(Kd*heading_err);
     speedR = -255;
   }
-  else if (heading_err > 0)
+  else if (heading_err > 5)
   {
     speedR = -255 + abs(Kd*heading_err);
     speedL = -255;
@@ -221,12 +223,12 @@ void reverse(float heading_refference){
 
 void stopp(float heading_refference){
   heading_err = heading - heading_refference;
-  if (heading_err < 2)
+  if (heading_err < 5)
   {
     speedL = -255/4 ;
     speedR = 255/4;
   }
-  else if (heading_err > 2)
+  else if (heading_err > 5)
   {
     speedR = -255/4 ;
     speedL = 255/4;
@@ -242,13 +244,13 @@ void turn(float heading_refference){
   heading_err = heading - heading_refference;
   if (heading_err < 2)
   {
-    speedL = -255/2 ;
-    speedR = 255/2;
+    speedL = -255 ;
+    speedR = 255;
   }
   else if (heading_err > 2)
   {
-    speedR = -255/2 ;
-    speedL = 255/2;
+    speedR = -255 ;
+    speedL = 255;
   }
   else
   {
