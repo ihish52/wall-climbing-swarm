@@ -32,11 +32,12 @@ void isr_a() {
    } else {
      counter --;
    }
-   Serial.print("Position: ");
-   Serial.println(counter);
+
 
 }
 
  void loop() { 
-
+    Serial.print("Position: ");
+    Serial.println(counter);
+    delay(10);
  }
