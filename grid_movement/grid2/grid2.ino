@@ -87,7 +87,7 @@ void setup(){
 
   //serial comms
   ESP_BT.begin("ESP32_plsfindme"); //bluetooth device name
-  
+  Serial.println("start");
 }
 
 void loop(){
@@ -314,5 +314,3 @@ void updatePID()
   speedL = constrain(speedL, -255, 255);
   speedR = constrain(speedR, -255, 255);
 }
-
-
