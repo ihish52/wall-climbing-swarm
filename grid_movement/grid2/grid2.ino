@@ -54,6 +54,8 @@ bool turn = false;
 bool stop = false;
 //boolean to show that robot is in motion - ignore remote commands
 bool moving = false;
+bool dir = false; //left = false, right = true
+
 
 long timer = millis();
 
@@ -125,17 +127,28 @@ void loop(){
   }
   else if (input == 'R' && moving == false)
   {
-    moving = true;
-    heading_ref = -90;
-    turn = true;
+    Serial.println("Right");
+    heading_ref -= 90;
+    if (heading_ref == -180) heading_ref = -90;
+    else
+    {
+      turn = true;
+      dir = false;
+      moving = true;
+    }
     Serial.println("Right");
   }
   else if (input == 'L' && moving == false)
   {
-
-    moving = true;
-    heading_ref = 90;
-    turn = true;
+    Serial.println("Left");
+    heading_ref += 90;
+    if (heading_ref == 180) heading_ref = 90;
+    else
+    {
+      turn = true;
+      dir = false;
+      moving = true;
+    }
     Serial.println("Left");
   }
   /*else
@@ -144,7 +157,9 @@ void loop(){
     motorR.brake();
   }*/
 
-
+  //MUST UPDATE HERE AGAIN
+  //updated motor LR speed based on gyro angle
+  updatePID();
 
   //movement logic based on boolean states
   if (fw == true)
@@ -169,6 +184,7 @@ void loop(){
     print_acc();
     print_enc();
     timer = millis();
+    Serial.println(heading_ref);
   }
 
 }
@@ -178,12 +194,22 @@ void turnFixed()
   counterR = 0;
   counterL = 0;
 
-  motorL.drive(FULL_SPEED);
-  motorR.drive((FULL_SPEED)*(-1));
-
+  if (dir == false)
+  {
+    motorR.drive(FULL_SPEED*(-1));
+    motorL.drive(FULL_SPEED);
+  }
+  else if (dir == true)
+  {
+    motorL.drive(FULL_SPEED);
+    motorR.drive(FULL_SPEED*(-1));
+  }
+  
   //condition to stop turning
   if (abs(heading_err) < 5)
   {
+    Serial.println("turn stop ");
+    Serial.print(abs(heading_err));
     turn = false;
     counterR = 0;
     counterL = 0;
@@ -194,7 +220,8 @@ void turnFixed()
 
 void forwardFixed()
 {
-  //grid tracking logic
+  //grid tracking 
+  /*
   if (counterL == 0 || counterR == 0)
   {
     switch (heading_ref)
@@ -214,8 +241,9 @@ void forwardFixed()
       //add backwards reverse case
     }
   }
-
-  if (stop == false)
+  */
+  if(1)
+  //if (stop == false)
   {
     motorL.drive(speedL);
     motorR.drive(speedR);
@@ -260,7 +288,9 @@ void updatePID()
 {
   //will heading error be around 5-20 degrees when moving forward ONLY?
   //e.g. Error = 10 degrees -> opposite wheel gets -10*10 = -100 speed
+  //Serial.print("Heading error:");
   heading_err = heading - heading_ref;
+  //Serial.println(heading_err);
 
   //possibly the other way around
   if (heading_err < 0)
