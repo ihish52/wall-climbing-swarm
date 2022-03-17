@@ -112,39 +112,52 @@ void loop() {
   {
     input = ESP_BT.read();
   }
+  Serial.println(input);
 
   //store current heading in array from DMP
   DMP.ypr_pitch_bound(ypr[0], ypr[1], ypr[2]);
   heading = ypr[0];
-  if(input=='U')current_state=FORWARD;
-  else if (input == 'D')current_state=REVERSE;
+  if(input=='U'){
+    current_state=FORWARD;
+    forward(heading_ref);
+  }
+  else if (input == 'D'){
+    current_state=REVERSE;
+    reverse(heading_ref);
+  }
   else if(input == 'L'){
     current_state = TURN;
+    turn(heading_ref);
     heading_ref-=2;
     counterL=0;
     counterR=0;
   }
   else if(input == 'R'){
     current_state = TURN;
+    turn(heading_ref);
     heading_ref+=2;
     counterL=0;
     counterR=0;
   }
   else if (input == 'X'){
     current_state = STOP;
+    stopp(heading_ref);
     counterL=0;
     counterR=0;
   }
 
   else{
     current_state=STOP;
+    stopp(heading_ref);
     counterL=0;
     counterR=0;
   }
 
-  switch(current_state){
+  /*switch(current_state){
     FORWARD:
       forward(heading_ref);
+      Serial.println("forward");
+      
       break;
     REVERSE:
       reverse(heading_ref);
@@ -158,11 +171,13 @@ void loop() {
     default:
       stopp(heading_ref);
       break;
-  }
+  }*/
 
 
   speedL = constrain(speedL, -255, 255);
   speedR = constrain(speedR, -255, 255);
+  Serial.println(speedL);
+  Serial.println(speedR);
   motorL.drive(speedL);
   motorR.drive(speedR);
   
@@ -182,7 +197,7 @@ void UpdatePosition(){
 
 void forward(float heading_refference){
    heading_err = heading - heading_refference;
-  
+  Serial.println("forward");
   //possibly the other way around
   if (heading_err < 5)
   {
