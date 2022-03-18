@@ -21,6 +21,7 @@ char input;
 #define Distance_measure 100
 #define Encoder_ticks 100
 #define Distance_constant Distance_measure/Encoder_ticks
+#define MATH_PI 3.141592653589793
 
 
 DMP_helper DMP;
@@ -35,7 +36,7 @@ const int offsetA = 1;
 const int offsetB = 1;
 
 //Motor definitions and variables
-float Kp = 10;
+float Kp = 5;
 float Kd = 0.0008;
 Motor motorL = Motor(AIN2, AIN1, PWMA, offsetA, STBY, PWM_CH_A);
 Motor motorR = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
@@ -50,7 +51,6 @@ int driveL, driveR = 0;
 int speedL, speedR = 0;
 float controlL, controlR = 0;
 uint32_t timer_PID, timer_PID_prev , elapsed_timer_PID = 0;
-
 
 //movement functions
 void forward();
@@ -116,14 +116,13 @@ void loop() {
 
   //store current heading in array from DMP
   DMP.ypr_pitch_bound(ypr[0], ypr[1], ypr[2]);
-  heading = ypr[0];
+  heading = ypr[2];
   heading_error = heading - heading_ref;
   
   //PD controller
   timer_PID_prev = timer_PID;
   timer_PID = millis();
   elapsed_timer_PID = timer_PID - timer_PID_prev;
-  
   
   if(input == 'U'){
     current_state=FORWARD;
@@ -135,11 +134,11 @@ void loop() {
   }
   else if(input == 'L'){
     current_state = TURN;
-    heading_ref += 2;
+    heading_ref -= 2;
   }
   else if(input == 'R'){
     current_state = TURN;
-    heading_ref -= 2;
+    heading_ref += 2;
   }
   else{
     current_state=STOP;
@@ -148,14 +147,16 @@ void loop() {
   
   turn();
 
-  driveL = contrain((150*speedL + controlL), -255, 255);
-  driveR = contrain((-150*speedR + controlR), -255, 255);
+  driveL = constrain((200*speedL + controlL), -255, 255);
+  driveR = constrain((-200*speedR + controlR), -255, 255);
   
   motorL.drive(driveL);
   motorR.drive(driveR);
   
   heading_error_prev = heading_error;
   
+  Serial.println(heading_ref);
+
 
 }
 
@@ -181,8 +182,10 @@ void stopp(){
 }
 
 void turn(){
+
 	controlR = Kp*heading_error + Kd*(heading_error - heading_error_prev);
 	controlL = -controlR;
+
 }
 
 //printer encoder counter values
@@ -204,4 +207,4 @@ void print_acc()
   Serial.print(ypr[1]);
   Serial.print("/");
   Serial.println(ypr[2]); //Roll on X axis
-}
+}
