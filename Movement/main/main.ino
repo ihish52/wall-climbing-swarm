@@ -180,9 +180,8 @@ void loop() {
   motorR.drive(speedR);
   
 
-  
-
 }
+
 void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
   x = distance_moved *cos(90 - ((180/pi)*heading));
