@@ -93,17 +93,27 @@ void setup() {
 
   Serial.println("START4");
 
+  //interrupt
+  attachInterrupt(outputA1, isr_a, CHANGE);
+  attachInterrupt(outputA2, isr_a, CHANGE);
+
 
 }
+
+void isr_a()
+{
+  updateEnc();
+  //Serial.println("updating enc");  
+}
+
+bool fw_flag = false;
 
 void loop() {
   if ((current_state == FORWARD)||(current_state == REVERSE)){
     UpdatePosition();
   }
   //update encoder counters LR
-  updateEnc();
-
-  print_enc();
+  //updateEnc();
 
   //update position
   
@@ -125,10 +135,12 @@ void loop() {
   timer_PID_prev = timer_PID;
   timer_PID = millis();
   elapsed_timer_PID = timer_PID - timer_PID_prev;
+
   
   if(input == 'U'){
     current_state=FORWARD;
-    forward();
+    fw_flag = true;
+    //forward();
   }
   else if (input == 'D'){
     current_state=REVERSE;
@@ -136,19 +148,30 @@ void loop() {
   }
   else if(input == 'L'){
     current_state = TURN;
-    heading_ref -= 2;
+    heading_ref -= 0.5;
     if(heading_ref < -179)
       heading_ref = 180;
   }
   else if(input == 'R'){
     current_state = TURN;
-    heading_ref += 2;
+    heading_ref += 0.5;
     if(heading_ref > 180)
       heading_ref = -179;  
   }
   else{
     current_state=STOP;
-    stopp();
+      stopp();
+  }
+
+
+  if(fw_flag == true){
+    forward();
+    print_enc();
+    if(counterAVG * Distance_constant > 10){
+      fw_flag = false;
+      counterL = 0;
+      counterR = 0;
+    }
   }
   
   turn();
@@ -170,8 +193,8 @@ void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
   x = distance_moved *cos(90 - ((180/MATH_PI)*heading));
   y = distance_moved * sin(90-((180/MATH_PI)*heading));
-  counterL=0;
-  counterR=0;
+  //counterL=0;
+  //counterR=0;
 }
 
 void forward(){
