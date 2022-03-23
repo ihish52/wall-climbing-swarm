@@ -23,13 +23,14 @@ char input;
 #define Distance_constant Distance_measure/Encoder_ticks
 #define MATH_PI 3.141592653589793
 
-#define ROBOT_ID 0
 #define MAX_ROBOT_NUM 4
 #define calibrate_ticks 5000
 
 bool calibrate = true;
 float positions = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
+void set_robot_num();
+int robot_num = 0;
 
 DMP_helper DMP;
 float ypr[3];
@@ -99,15 +100,14 @@ void setup() {
   ESP_BT.begin("ESP32_plsfindme"); //bluetooth device name
 
   Serial.println("START4");
-
-
 }
 
 void loop() {
   if (calibrate == true){
+    set_robot_num(); // needs to know which number robot it is so the right element in the position array can be updated
     if (millis() - calibrate_timer > 3000){
       //check y position of each robot
-      if (positions[0][1] == 0 || positions[1][1] == 0 || positions[2][1] == 0 || positions[3][1] == 0)
+      if (positions[0][1] == 0 || positions[1][1] == 0 || positions[2][1] == 0 || positions[3][1] == 0) 
       {
         current_state=FORWARD;
         forward();
@@ -196,6 +196,8 @@ void UpdatePosition(){
   y = distance_moved * sin(90-((180/MATH_PI)*heading));
   counterL=0;
   counterR=0;
+  positions[robot_num][0] = x;
+  positions[robot_num][1] = y;
 }
 
 void forward(){
@@ -237,4 +239,11 @@ void print_acc()
   Serial.print(ypr[1]);
   Serial.print("/");
   Serial.println(ypr[2]); //Roll on X axis
+}
+
+void set_robot_num(){
+  if ((positions[1][1] && positions[2][1] && positions[3][1]) == -1) robot_num = 0;
+  else if (((positions[2][1] && positions[3][1]) == -1) && (positions[0][1] > 0)) robot_num = 1;
+  else if ((positions[3][1] == -1) && ((positions[0][1] && positions[0][2]) > 0)) robot_num = 2;
+  else if ((positions[0][1] && positions[1][1] && positions[2][1]) > 0) robot_num = 3;
 }
