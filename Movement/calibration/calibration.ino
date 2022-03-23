@@ -104,10 +104,10 @@ void setup() {
 }
 
 void loop() {
-  if (calibration == true){
+  if (calibrate == true){
     if (millis() - calibrate_timer > 3000){
       //check y position of each robot
-      if (position[0][1] == 0 || position[1][1] == 0 || position[2][1] == 0 || position[3][1] == 0)
+      if (positions[0][1] == 0 || positions[1][1] == 0 || positions[2][1] == 0 || positions[3][1] == 0)
       {
         current_state=FORWARD;
         forward();
@@ -119,7 +119,7 @@ void loop() {
         counterL = 0;
         counterR = 0;
         counterAVG = 0;
-        if (position[3][1] != -1) calibration = false;
+        if (positions[3][1] != -1) calibrate = false;
       
       }
       
