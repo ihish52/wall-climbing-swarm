@@ -18,8 +18,8 @@ char input;
 //BT command strings
 
 #define FULL_SPEED 255
-#define Distance_measure 100
-#define Encoder_ticks 100
+#define Distance_measure 36.25
+#define Encoder_ticks 10000
 #define Distance_constant Distance_measure/Encoder_ticks
 #define MATH_PI 3.141592653589793
 
@@ -27,10 +27,10 @@ char input;
 #define calibrate_ticks 5000
 
 bool calibrate = true;
-float positions = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
+float positions[4][4] = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
-void set_robot_num();
 int robot_num = 0;
+int test_counter = 0;
 
 DMP_helper DMP;
 float ypr[3];
@@ -100,37 +100,28 @@ void setup() {
   ESP_BT.begin("ESP32_plsfindme"); //bluetooth device name
 
   Serial.println("START4");
+
+  //interrupt
+  attachInterrupt(outputA1, isr_a, CHANGE);
+  attachInterrupt(outputA2, isr_a, CHANGE);
+
+
 }
 
-void loop() {
-  if (calibrate == true){
-    set_robot_num(); // needs to know which number robot it is so the right element in the position array can be updated
-    if (millis() - calibrate_timer > 3000){
-      //check y position of each robot
-      if (positions[0][1] == 0 || positions[1][1] == 0 || positions[2][1] == 0 || positions[3][1] == 0) 
-      {
-        current_state=FORWARD;
-        forward();
+void isr_a()
+{
+  updateEnc();
+  //Serial.println("updating enc");  
+}
 
-      }
-      if (counterAVG > calibrate_ticks){
-        current_state=STOP;
-        stopp();
-        counterL = 0;
-        counterR = 0;
-        counterAVG = 0;
-        if (positions[3][1] != -1) calibrate = false;
-      
-      }
-      
-    }
-  }
-  
+bool fw_flag = false;
+
+void loop() {
   if ((current_state == FORWARD)||(current_state == REVERSE)){
     UpdatePosition();
   }
   //update encoder counters LR
-  updateEnc();
+  //updateEnc();
 
   //update position
   
@@ -152,10 +143,39 @@ void loop() {
   timer_PID_prev = timer_PID;
   timer_PID = millis();
   elapsed_timer_PID = timer_PID - timer_PID_prev;
-  
+
+  if (calibrate == true)
+  {
+    if (millis() - calibrate_timer > 3000){
+      //check y position of each robot
+      if (positions[0][1] == 0 || positions[1][1] == 0 || positions[2][1] == 0 || positions[3][1] == 0) 
+      {
+        current_state=FORWARD;
+        forward();
+
+      }
+      if (counterAVG > calibrate_ticks){
+        current_state=STOP;
+        stopp();
+        counterL = 0;
+        counterR = 0;
+        counterAVG = 0;
+
+        if (positions[3][1] != -1) calibrate = false;
+
+        positions[test_counter+1][1] = 0;
+        test_counter++;   
+      }
+      
+    }
+  }
+
+  else
+  {
   if(input == 'U'){
     current_state=FORWARD;
-    forward();
+    fw_flag = true;
+    //forward();
   }
   else if (input == 'D'){
     current_state=REVERSE;
@@ -163,17 +183,34 @@ void loop() {
   }
   else if(input == 'L'){
     current_state = TURN;
-    heading_ref -= 2;
+    heading_ref -= 0.5;
+    if(heading_ref < -179)
+      heading_ref = 180;
   }
   else if(input == 'R'){
     current_state = TURN;
-    heading_ref += 2;
+    heading_ref += 0.5;
+    if(heading_ref > 180)
+      heading_ref = -179;  
   }
   else{
     current_state=STOP;
-    stopp();
+      stopp();
   }
-  
+
+
+  if(fw_flag == true){
+    forward();
+    print_enc();
+    if(counterAVG * Distance_constant > 10){
+      fw_flag = false;
+      counterL = 0;
+      counterR = 0;
+    }
+  }
+
+  }
+
   turn();
 
   driveL = constrain((200*speedL + controlL), -255, 255);
@@ -193,10 +230,10 @@ void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
   x = distance_moved *cos(90 - ((180/MATH_PI)*heading));
   y = distance_moved * sin(90-((180/MATH_PI)*heading));
-  counterL=0;
-  counterR=0;
-  positions[robot_num][0] = x;
-  positions[robot_num][1] = y;
+  //counterL=0;
+  //counterR=0;
+  positions[0][0] = x;
+  positions[0][1] = y;
 }
 
 void forward(){
@@ -214,9 +251,14 @@ void stopp(){
 
 void turn(){
 
-	controlR = Kp*heading_error + Kd*(heading_error - heading_error_prev);
-	controlL = -controlR;
-
+  if(abs(heading-heading_ref) > 180){
+    controlL = Kp*heading_error + Kd*(heading_error - heading_error_prev);
+	  controlR = -controlL;
+  }
+  else{
+    controlR = Kp*heading_error + Kd*(heading_error - heading_error_prev);
+    controlL = -controlR;
+  }
 }
 
 //printer encoder counter values
@@ -238,11 +280,4 @@ void print_acc()
   Serial.print(ypr[1]);
   Serial.print("/");
   Serial.println(ypr[2]); //Roll on X axis
-}
-
-void set_robot_num(){
-  if ((positions[1][1] && positions[2][1] && positions[3][1]) == -1) robot_num = 0;
-  else if (((positions[2][1] && positions[3][1]) == -1) && (positions[0][1] > 0)) robot_num = 1;
-  else if ((positions[3][1] == -1) && ((positions[0][1] && positions[0][2]) > 0)) robot_num = 2;
-  else if ((positions[0][1] && positions[1][1] && positions[2][1]) > 0) robot_num = 3;
 }
