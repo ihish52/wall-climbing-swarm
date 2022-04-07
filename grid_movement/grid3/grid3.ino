@@ -11,6 +11,7 @@
 #include <DMP_helper.h>
 #include <motor_controller.h>
 #include "BluetoothSerial.h"
+#include <math.h>
 
 //BT serial comms
 BluetoothSerial ESP_BT;
@@ -20,6 +21,10 @@ char input;
 
 #define FULL_SPEED 255
 #define GRID_TICK_1 10000
+#define Distance_measure 100
+#define Encoder_ticks 100
+#define Distance_constant Distance_measure/Encoder_ticks
+#define pi 3.1415926535897932384626433832795
 
 #define Kd  10
 //must be float even though heading is int
@@ -31,6 +36,7 @@ float ypr[3];
 //used as int for switch case statements
 int heading = 0;
 int heading_ref = 0;
+float x = 0 , y = 0;
 
 //Motor direction offsets
 const int offsetA = 1;
@@ -47,6 +53,7 @@ int speedR = 255;
 //movement functions
 void turnFixed();
 void forwardFixed();
+void UpdatePosition();
 
 //booleans to decide robot motion at any given time
 bool fw = false;
@@ -270,6 +277,15 @@ void forwardFixed()
 
     moving = false;
   }
+}
+
+void UpdatePosition(){
+  float distance_moved = counterAVG*Distance_constant;
+  x = distance_moved *cos(90 - ((180/pi)*heading));
+  y = distance_moved * sin(90-((180/pi)*heading));
+  counterL=0;
+  counterR=0;
+  
 }
 
 //printer encoder counter values
