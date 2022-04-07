@@ -41,3 +41,13 @@ void DMP_helper::ypr_pitch_bound(float &yaw, float &pitch, float &roll){
     }
 }
 
+void DMP_helper::ypr_yaw_bound(float &yaw, float &pitch, float &roll){
+	uint8_t fifoBuffer[64];
+	Quaternion q;// [w, x, y, z]
+	if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
+        mpu.dmpGetQuaternion(&q, fifoBuffer);
+        yaw = asin(2*q.x*q.y + 2*q.z*q.w)*180/M_PI;
+        pitch = atan2(2*q.x*q.w - 2*q.y*q.z, 1 - 2*q.x*q.x - 2*q.z*q.z)*180/M_PI;
+		roll = atan2(2*q.y*q.w - 2*q.x*q.z, 1 - 2*q.y*q.y - 2*q.z*q.z)*180/M_PI;
+    }
+}
