@@ -5,7 +5,7 @@ class DMP_helper{
 	public:
 		void DMP_setup();
 		void ypr_pitch_bound(float &yaw, float &pitch, float &roll);
-		
+		void ypr_yaw_bound(float &yaw, float &pitch, float &roll);
 	private:
 		bool MPU_connection = false;
 		
