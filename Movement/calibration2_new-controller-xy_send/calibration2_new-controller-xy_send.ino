@@ -218,7 +218,7 @@ void loop() {
   
 
   //calculate average of encoder counters LR
-  counterAVG = (abs(counterR)+abs(counterL))/2.0;
+  counterAVG = ((counterR)-(counterL))/2.0;
    //read data from BT controller
   // if (ESP_BT.available())
   // {
@@ -347,8 +347,8 @@ void ResetEnc()
 
 void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
-  x += distance_moved *cos(90 - ((180/MATH_PI)*heading));
-  y += distance_moved * sin(90-((180/MATH_PI)*heading));
+  y += distance_moved *cos((MATH_PI/180)*(heading));
+  x += distance_moved * sin((MATH_PI/180)*heading);
 
   //uncomment again when debugging is done
   counterL=0;
