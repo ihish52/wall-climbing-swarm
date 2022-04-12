@@ -16,13 +16,17 @@
 #include <motor_controller.h>
 // #include "BluetoothSerial.h"
 
-#include <esp_now.h>
-#include <WiFi.h>
+//#include <esp_now.h>
+//#include <WiFi.h>
 
 // //BT serial comms
 // BluetoothSerial ESP_BT;
 char input,previnput;
 //BT command strings
+
+//extern variables in the esp-now_helper library
+float allxposi[5], allyposi[5], allerro[5], allheadi[5];
+char x;
 
 #define FULL_SPEED 255
 #define Distance_measure 36.25
@@ -44,7 +48,7 @@ int test_counter = 0;
 DMP_helper DMP;
 float ypr[3];
 float heading = 0;
-float x = 0 , y = 0;
+float xpos = 0 , ypos = 0;
 float heading_ref = 0;
 float heading_error, heading_error_prev = 0;
 
@@ -133,28 +137,28 @@ long timer1 = millis();
 void loop() {
   
   //for testing with controller
-  datasend.xpos = x;
-  datasend.ypos = y;
+  //datasend.xpos = xpos;
+  //datasend.ypos = ypos;
   
   if (millis() - print_timer > PRINT_TIME)
   {
     Serial.print("input:");
     Serial.println(input);
-    Serial.print("x: ");
-    Serial.print(datasend.xpos);
-    Serial.print(" y: ");
-    Serial.print(datasend.ypos);
+    Serial.print("xpos: ");
+    Serial.print(xpos);
+    Serial.print(" ypos: ");
+    Serial.print(ypos);
 
     print_enc();
 
     print_timer = millis();
   }
   
-  master_send(1,2,x,y);
+  master_send(1,2,xpos,ypos);
 
   /*if(millis() - timer1 > 75){  //75 
     esp_err_t result = esp_now_send(0, (uint8_t *) &datasend, sizeof(send_struct));
-//    ESP_BT.write(datasend.x);
+//    ESP_BT.write(datasend.xpos);
     timer1 = millis();
     //print moved to print timer above
   }*/
@@ -300,8 +304,8 @@ void ResetEnc()
 
 void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
-  y += distance_moved *cos((MATH_PI/180)*(heading));
-  x += distance_moved * sin((MATH_PI/180)*heading);
+  ypos += distance_moved *cos((MATH_PI/180)*(heading));
+  xpos += distance_moved * sin((MATH_PI/180)*heading);
 
   //uncomment again when debugging is done
   counterL=0;
@@ -313,8 +317,8 @@ void UpdatePosition(){
   //Serial.println(x);
   //Serial.print("Y = ");
   //Serial.println(y);
-  positions[datarec.id][0] = x;
-  positions[datarec.id][1] = y;
+  //positions[datarec.id][0] = x;
+  //positions[datarec.id][1] = y;
 }
 
 void forward(){

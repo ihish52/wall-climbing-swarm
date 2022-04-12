@@ -51,8 +51,8 @@ const int offsetA = 1;
 const int offsetB = 1;
 
 //Motor definitions and variables
-float Kp = 5;
-float Kd = 0.0008;
+float Kp = 10;//5;
+float Kd = 0.002;//0.0008;
 Motor motorL = Motor(AIN2, AIN1, PWMA, offsetA, STBY, PWM_CH_A);
 Motor motorR = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
 
@@ -102,7 +102,7 @@ typedef struct send_struct {
 rec_slave datarec;
 send_struct datasend;
 
-uint8_t contrAddr[] = {0x94,0x3C,0xC6,0x08,0x13,0x04};
+uint8_t contrAddr[] = {0x00,0x00,0x00,0x00,0x00,0x00}; //{0x7C,0x9E,0xBD,0x49,0x00,0x04};  //{0x94,0x3C,0xC6,0x08,0x13,0x04};
 
 //callback function for when data is sent to master
 void sendmaster(const uint8_t *mac, esp_now_send_status_t status) {
