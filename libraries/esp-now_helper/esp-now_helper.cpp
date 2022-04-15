@@ -262,7 +262,7 @@ void controller_send() {
   }
   else if (left == HIGH){
     send_master.err = 'L';
-  }s
+  }
   else if (right == HIGH) {
     send_master.err = 'R';
   }

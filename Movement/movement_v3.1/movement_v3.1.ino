@@ -32,7 +32,7 @@
 #include <motor_controller.h>
 
 //FTL variables
-bool FTL = true;
+bool FTL = false;
 
 //Clustering variables
 bool cluster = false; //default off
@@ -199,7 +199,7 @@ void loop() {
     }
   }
 
-  //MASTER FTL code
+  //MASTER FTL code - master does not need this flag true as code is empty
   else if (FTL == true)
   {
     //master_send() above already sends command character from remote

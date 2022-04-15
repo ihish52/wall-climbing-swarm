@@ -38,6 +38,9 @@ bool FTL = true;
 
 //Clustering variables
 bool cluster = false; //default off
+float m_s_ypos = 0;
+float m_s_xpos = 0;
+float m_s_heading = 0;
 
 char input,previnput;
 
@@ -242,6 +245,12 @@ void loop() {
   else if (cluster == true)
   {
     //calculate slave's heading to master's x,y coordinates
+    m_s_ypos = allyposi[0] - allyposi[ID];
+    m_s_xpos = allxposi[0] - allxposi[ID];
+
+    //calculate slave's heading from 0 to the master
+    m_s_heading = atan2(m_s_xpos/m_s_ypos);
+
     
   }
 
