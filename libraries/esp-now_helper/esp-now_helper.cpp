@@ -29,6 +29,10 @@ int up = 0;
 int rev = 0;
 int left = 0;
 int right = 0;
+int triangle = 0;
+int square = 0;
+int circle = 0;
+int cross = 0;
 
 //from slave code
 extern float allxposi[5], allyposi[5], allerro[5], allheadi[5];
@@ -207,6 +211,10 @@ void setup_esp_now_controller() {
   pinMode(25, INPUT); //reverse - 39
   pinMode(33, INPUT); //right - 34
   pinMode(32, INPUT); //left - 35
+  pinMode(17, INPUT); //square
+  pinMode(18, INPUT); //triangle
+  pinMode(19, INPUT); //circle
+  pinMode(5, INPUT); //cross
 
   /* Serial.begin(115200); */
   WiFi.mode(WIFI_STA); //setting device as wifi station
@@ -237,8 +245,12 @@ void setup_esp_now_controller() {
 void controller_send() {
 	up = digitalRead(26);
   rev = digitalRead(25);
-  left = digitalRead(32); //35
+  left = digitalRead(32); 
   right = digitalRead(33);
+  triangle = digitalRead(18);
+  square = digitalRead(17);
+  circle = digitalRead(19);
+  cross = digitalRead(5);
 
   send_master.id = 4; //for controller
     
@@ -250,9 +262,21 @@ void controller_send() {
   }
   else if (left == HIGH){
     send_master.err = 'L';
-  }
+  }s
   else if (right == HIGH) {
     send_master.err = 'R';
+  }
+  else if (triangle == HIGH) {
+	send_master.err = 'T';
+  }
+  else if (square == HIGH) {
+	send_master.err = 'S';
+  }
+  else if (circle == HIGH) {
+	send_master.err = 'O';
+  }
+  else if (cross == HIGH) {
+	send_master.err = 'C';
   }
   else {
     send_master.err = 'X';

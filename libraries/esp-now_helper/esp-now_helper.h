@@ -20,7 +20,6 @@ typedef struct ind_struct {
 } ind_struct;
 
 
-
 void send2slave(const uint8_t *mac, esp_now_send_status_t status);
 void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len);
 
@@ -38,5 +37,3 @@ void controller_send();
 
 //controller uses same callback function when sent to master
 
-
-//test this bitch
