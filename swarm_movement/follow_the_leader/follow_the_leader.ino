@@ -31,9 +31,6 @@ char input,previnput;
 #define MAX_ROBOT_NUM 4
 #define calibrate_ticks 5000
 
-#define PRINT_TIME 1000
-long print_timer = millis();
-
 bool calibrate = false;
 float positions[4][4] = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
@@ -51,8 +48,8 @@ const int offsetA = 1;
 const int offsetB = 1;
 
 //Motor definitions and variables
-float Kp = 10;//5;
-float Kd = 0.002;//0.0008;
+float Kp = 5;
+float Kd = 0.0008;
 Motor motorL = Motor(AIN2, AIN1, PWMA, offsetA, STBY, PWM_CH_A);
 Motor motorR = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
 
@@ -73,6 +70,9 @@ void turn();
 void reverse();
 void stopp();
 
+//swarm variables
+bool FTL = false;
+
 //Position Function
 void UpdatePosition();
 uint32_t timer = millis();
@@ -89,9 +89,8 @@ state current_state=STOP;
 
 typedef struct rec_slave {
   int id;
-  float err;
-  float heading;
-  float pos[2];
+  int err;
+  int pos[2];
 } rec_slave;
 
 typedef struct send_struct {
@@ -102,12 +101,12 @@ typedef struct send_struct {
 rec_slave datarec;
 send_struct datasend;
 
-uint8_t contrAddr[] = {0x00,0x00,0x00,0x00,0x00,0x00}; //{0x7C,0x9E,0xBD,0x49,0x00,0x04};  //{0x94,0x3C,0xC6,0x08,0x13,0x04};
+uint8_t contrAddr[] = {0x94,0x3C,0xC6,0x08,0x13,0x04};
 
 //callback function for when data is sent to master
 void sendmaster(const uint8_t *mac, esp_now_send_status_t status) {
-  //Serial.print("\r\nLast Packet Send Status:\t");
-  //Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
 void afterrec(const uint8_t * mac_addr, const uint8_t *incomingData, int len){
@@ -184,33 +183,18 @@ void loop() {
   datasend.xpos = x;
   datasend.ypos = y;
   
-  if (millis() - print_timer > PRINT_TIME)
-  {
-    Serial.print("input:");
-    Serial.println(input);
-    Serial.print("x: ");
-    Serial.print(datasend.xpos);
-    Serial.print(" y: ");
-    Serial.print(datasend.ypos);
-
-    print_enc();
-
-    print_timer = millis();
-  }
   
-
-  if(millis() - timer1 > 75){  //75 
+  
+  /*if(millis() - timer1 > 75){  //75 
     esp_err_t result = esp_now_send(0, (uint8_t *) &datasend, sizeof(send_struct));
 //    ESP_BT.write(datasend.x);
     timer1 = millis();
-    //print moved to print timer above
-  }
-  
-  //update position here commented out for now
-  /*if ((current_state == FORWARD)||(current_state == REVERSE)){
-    UpdatePosition();
+    Serial.println(datasend.xpos);
   }*/
-
+  
+  if ((current_state == FORWARD)||(current_state == REVERSE)){
+    UpdatePosition();
+  }
   //update encoder counters LR
   //updateEnc();
 
@@ -218,7 +202,7 @@ void loop() {
   
 
   //calculate average of encoder counters LR
-  counterAVG = ((counterR)-(counterL))/2.0;
+  counterAVG = (abs(counterR)+abs(counterL))/2.0;
    //read data from BT controller
   // if (ESP_BT.available())
   // {
@@ -235,7 +219,18 @@ void loop() {
   timer_PID = millis();
   elapsed_timer_PID = timer_PID - timer_PID_prev;
 
-  //calibrate code deactivated because calibrate bool initialized to false
+  if(input == 'FTL' && FTL == false) FTL = true; // press FTL once to turn on
+  if (input == 'FTL' && FTL == true) FTL = false; // press FTL twice to turn off
+  
+  if (FTL){
+    // turn all robots to leaders heading direction
+    if (positions[robot_num][2] != positions[0][2]){
+      positions[robot_num][2] = positions[0][2];
+      current_state = TURN;
+      heading_ref = positions[0][2]
+    }
+  }
+
   if (calibrate == true)
   {
     if (millis() - calibrate_timer > 3000){
@@ -267,9 +262,9 @@ void loop() {
   if(input == 'U'){
     current_state=FORWARD;
     if(previnput !='U'){
-      //counterL = 0;
-      //counterR = 0;
-      //counterAVG = 0;
+      counterL = 0;
+      counterR = 0;
+      counterAVG = 0;
     }
     //fw_flag = true;
     forward();
@@ -277,9 +272,9 @@ void loop() {
   else if (input == 'D'){
     current_state=REVERSE;
     if(previnput !='D'){
-      //counterL = 0;
-      //counterR = 0;
-      //counterAVG = 0;
+      counterL = 0;
+      counterR = 0;
+      counterAVG = 0;
     }
     reverse();
   }
@@ -300,14 +295,7 @@ void loop() {
     //fw_flag=false;
       stopp();
   }
-
-  //reset encoder ticks and update position after forward or backward movement stops only
-  if (input == 'X' && previnput == 'U') UpdatePosition();
-  else if (input == 'X' && previnput == 'D') UpdatePosition();
-  else if (input == 'X' && previnput == 'L') ResetEnc(); //reset enc without updating position
-  else if (input == 'X' && previnput == 'R') ResetEnc();
-
-  previnput=input;
+previnput=input;
 
   /*if(fw_flag == true){
     forward();
@@ -337,29 +325,17 @@ void loop() {
 
 }
 
-//reset encoders after turning without updating position
-void ResetEnc()
-{
-  counterL=0;
-  counterR=0;
-  counterAVG=0;
-}
-
 void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
-  y += distance_moved *cos((MATH_PI/180)*(heading));
-  x += distance_moved * sin((MATH_PI/180)*heading);
-
-  //uncomment again when debugging is done
+  x += distance_moved *cos(90 - ((180/MATH_PI)*heading));
+  y += distance_moved * sin(90-((180/MATH_PI)*heading));
   counterL=0;
   counterR=0;
   counterAVG=0;
-
-  //prints performed in print timer in loop
-  //Serial.print("X = ");
-  //Serial.println(x);
-  //Serial.print("Y = ");
-  //Serial.println(y);
+  Serial.print("X = ");
+  Serial.println(x);
+  Serial.print("Y = ");
+  Serial.println(y);
   positions[datarec.id][0] = x;
   positions[datarec.id][1] = y;
 }
