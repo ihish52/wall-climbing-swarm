@@ -1,8 +1,6 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-#define SEND_DELAY 150
-
 
 //structure to hold data to send - can create more structures if different data is to be sent
 typedef struct all_struct {

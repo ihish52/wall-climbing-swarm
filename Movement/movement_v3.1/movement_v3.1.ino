@@ -8,7 +8,7 @@
 #define WIRE_H
 #include "Wire.h"
 #endif
-
+ 
 #define KP 7
 #define KD 0.001
 
@@ -141,14 +141,17 @@ void loop() {
     Serial.print("xpos: ");
     Serial.print(xpos); //xpos
     Serial.print(" ypos: ");
-    Serial.print(ypos);
+    Serial.println(ypos);
+    Serial.print("heading:");
+    Serial.println(heading); //heading
 
     print_enc();
 
     print_timer = millis();
   }
+
   
-  master_send(0,heading,xpos,ypos); 
+  master_send(0,heading,xpos,ypos);
 
   //calculate average of encoder counters LR
   counterAVG = ((counterR)-(counterL))/2.0;

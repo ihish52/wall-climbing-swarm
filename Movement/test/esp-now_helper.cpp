@@ -1,12 +1,12 @@
 #include "esp-now_helper.h"		
 
 //add controller address
-uint8_t slaveAddress1[] = {0x84,0xCC,0xA8,0x01,0x03,0x20};
-uint8_t slaveAddress2[] = {0x7C,0x9E,0xBD,0x48,0xAD,0x64}; 
+uint8_t slaveAddress1[] = {0x7C,0x9E,0xBD,0x48,0xAD,0x64}; 
+uint8_t slaveAddress2[] = {0x94,0x3C,0xC6,0x08,0x13,0x04}; 
 uint8_t slaveAddress3[] = {0x7C,0x9E,0xBD,0x48,0xB5,0x04};
 uint8_t contrAddress[] =  {0x7C,0x9E,0xBD,0x49,0x00,0x04};  //{0x94,0x3C,0xC6,0x08,0x13,0x04};
 
-uint8_t masterAddress[] = {0x94,0x3C,0xC6,0x08,0x13,0x04};//slave 1 master test//--> master 1{0x84,0xCC,0xA8,0x01,0x03,0x20};//{0x30,0x83,0x98,0x53,0xBB,0x24}; //(robot 1)//{0x84,0xCC,0xA8,0x01,0x03,0x20}; (silver cable)
+uint8_t masterAddress[] = {0x84,0xCC,0xA8,0x01,0x03,0x20};
 
 //fix struct for controller, master and slave
 all_struct send_slave;
@@ -18,6 +18,7 @@ ind_struct send_master;
 rec_slave slave1;
 rec_slave slave2;
 rec_slave slave3;
+
 rec_slave allslaves[3] = {slave1,slave2,slave3}; */
 
 long timer_master = millis();
@@ -29,28 +30,19 @@ int up = 0;
 int rev = 0;
 int left = 0;
 int right = 0;
-int triangle = 0;
-int square = 0;
-int circle = 0;
-int cross = 0;
 
 //from slave code
 extern float allxposi[5], allyposi[5], allerro[5], allheadi[5];
 extern char x;
-extern int g; //can delete after test
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //checks if slaves received data
 void send2slave(const uint8_t *mac, esp_now_send_status_t status) {
   char macstr[18];
-/*   Serial.print(" send status:\t");
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Yay :D":"Oh no :("); */
+  // Serial.print(" send status:\t");
+  // Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Yay :D":"Oh no :(");
 //  Serial.println("sent");
-	g += 1; //can delete
-	
 }
-                                                      
+
 void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len) {
 
   //copy received data into own struct 
@@ -58,8 +50,7 @@ void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len
 
   if (rec_slave.id == 4) {
     send_slave.x = rec_slave.err; //movement command
-	/* Serial.println(send_slave.x); */
-	x = send_slave.x;
+	// Serial.println(send_slave.x);
   }
 
   //updating data
@@ -73,12 +64,12 @@ void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len
 
 void setup_esp_now_master()
 {
-	/* Serial.begin(115200); */
+	// Serial.begin(115200);
 	WiFi.mode(WIFI_STA); //setting device as wifi station
 
   //initialise ESP-NOW
   if(esp_now_init() != ESP_OK) {
-    /* Serial.println("Error initialising ESP-NOW"); */
+    Serial.println("Error initialising ESP-NOW");
     return;
   }
   
@@ -94,7 +85,7 @@ void setup_esp_now_master()
   //register first slave
   memcpy(slaveinfo.peer_addr, slaveAddress1, 6);
   if (esp_now_add_peer(&slaveinfo) != ESP_OK) {
-    /* Serial.println("Failed to connect to slave 1"); */
+    // Serial.println("Failed to connect to slave 1");
     return;
   }
   //register second slave
@@ -107,14 +98,14 @@ void setup_esp_now_master()
   //register third slave
   memcpy(slaveinfo.peer_addr, slaveAddress3, 6);
   if (esp_now_add_peer(&slaveinfo) != ESP_OK) {
-    /* Serial.println("Failed to connect to slave 3"); */
+    // Serial.println("Failed to connect to slave 3");
     return;
   }
   
   //register controller
   memcpy(slaveinfo.peer_addr, contrAddress, 6);
   if (esp_now_add_peer(&slaveinfo) != ESP_OK) {
-    /* Serial.println("Failed to connect to controller"); */
+    // Serial.println("Failed to connect to controller");
     return;
   }
 }
@@ -127,13 +118,13 @@ void master_send(float err, float heading, float xpos, float ypos)
   send_slave.allxpos[0] = xpos;
   send_slave.allypos[0] = ypos;
   
-  if(millis() - timer_master > SEND_DELAY){  //75 
-    esp_err_t result = esp_now_send(0, (uint8_t *) &send_slave, sizeof(send_slave)); //0 //contrAddress
+  
+  if(millis() - timer_master > 120){  //75 
+    esp_err_t result = esp_now_send(0, (uint8_t *) &send_slave, sizeof(send_slave));
     timer_master = millis();
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
 //functions from slave code
 
 //callback function for when data is received
@@ -142,15 +133,13 @@ void recfrommaster(const uint8_t * mac, const uint8_t *incoming, int len) {
 //  Serial.println("rec");
   //copy data from incoming to data struct
   memcpy(&rec_master, incoming, sizeof(rec_master));
-  memcpy(allerro, rec_master.allerr, sizeof(rec_master.allerr));
-  memcpy(allheadi, rec_master.allhead, sizeof(rec_master.allhead));
   memcpy(allxposi, rec_master.allxpos, sizeof(rec_master.allxpos));
   memcpy(allyposi, rec_master.allypos, sizeof(rec_master.allypos));
+  memcpy(allerro, rec_master.allerr, sizeof(rec_master.allerr));
+  memcpy(allheadi, rec_master.allhead, sizeof(rec_master.allhead));
 
   x = rec_master.x; //movement
-  /* Serial.println(x); */
-  
-  //allheadi[0] = rec_master.allhead[0];
+  // Serial.println(x);
 
 }
 
@@ -162,12 +151,12 @@ void send2master(const uint8_t *mac, esp_now_send_status_t status) {
 
 void setup_esp_now_slave()
 {
-	/* Serial.begin(115200); */
+	// Serial.begin(115200);
 	WiFi.mode(WIFI_STA); //setting device as wifi station
 
   //initialise ESP-NOW
   if(esp_now_init() != ESP_OK) {
-    /* Serial.println("Error initialising ESP-NOW"); */
+    // Serial.println("Error initialising ESP-NOW");
     return;
   }
   
@@ -183,7 +172,7 @@ void setup_esp_now_slave()
   
   // Add peer
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
-    /* Serial.println("Failed to add peer"); */
+    // Serial.println("Failed to add peer");
     return;
   }
 }
@@ -196,13 +185,13 @@ void slave_send(int id, float err, float heading, float xpos, float ypos)
   send_master.err = err;
   send_master.heading = heading;
 
-  if(millis() - timer_slave > SEND_DELAY) {
+  if(millis() - timer_slave > 120) {
     esp_err_t result = esp_now_send(masterAddress, (uint8_t *) &send_master, sizeof(send_master));
     timer_slave = millis();
   }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
+//code from controller
 
 //setup for controller
 void setup_esp_now_controller() {
@@ -211,17 +200,13 @@ void setup_esp_now_controller() {
   pinMode(25, INPUT); //reverse - 39
   pinMode(33, INPUT); //right - 34
   pinMode(32, INPUT); //left - 35
-  pinMode(17, INPUT); //square
-  pinMode(18, INPUT); //triangle
-  pinMode(19, INPUT); //circle
-  pinMode(5, INPUT); //cross
 
-  /* Serial.begin(115200); */
+  // Serial.begin(115200);
   WiFi.mode(WIFI_STA); //setting device as wifi station
 //
   //initialise ESP-NOW
   if(esp_now_init() != ESP_OK) {
-	/* Serial.println("Error initialising ESP-NOW"); */
+	// Serial.println("Error initialising ESP-NOW");
 	return;
   }
   
@@ -237,7 +222,7 @@ void setup_esp_now_controller() {
   
   // Add peer
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
-	/* Serial.println("Failed to add peer"); */
+	// Serial.println("Failed to add peer");
 	return;
   }
 }
@@ -245,12 +230,8 @@ void setup_esp_now_controller() {
 void controller_send() {
 	up = digitalRead(26);
   rev = digitalRead(25);
-  left = digitalRead(32); 
+  left = digitalRead(32); //35
   right = digitalRead(33);
-  triangle = digitalRead(18);
-  square = digitalRead(17);
-  circle = digitalRead(19);
-  cross = digitalRead(5);
 
   send_master.id = 4; //for controller
     
@@ -266,27 +247,13 @@ void controller_send() {
   else if (right == HIGH) {
     send_master.err = 'R';
   }
-  else if (triangle == HIGH) {
-	send_master.err = 'T';
-  }
-  else if (square == HIGH) {
-	send_master.err = 'S';
-  }
-  else if (circle == HIGH) {
-	send_master.err = 'O';
-  }
-  else if (cross == HIGH) {
-	send_master.err = 'C';
-  }
   else {
     send_master.err = 'X';
   }
-  
-  x = send_master.err; //for testing
 
-  if(millis() - timer_cont > SEND_DELAY) {
+  if(millis() - timer_cont > 120) {
     esp_err_t result = esp_now_send(masterAddress, (uint8_t *) &send_master, sizeof(send_master));
     timer_cont = millis();
-    /* Serial.println(send_master.err); */
+    // Serial.println(send_master.err);
   }
 }

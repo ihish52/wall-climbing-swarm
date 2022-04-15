@@ -360,7 +360,8 @@ void GetDesiredLocation(float x, float y){
   float tempy = pow((y-ypos),2);
   Ddesired = sqrt(tempx+tempy);
   Hdesired = (180/MATH_PI)*atan2((x-xpos),(y-ypos));
-  Tdesired = Ddesired/Distance_constant;
+  //Tdesired = Ddesired/Distance_constant;
+  Tdesired =10000;
 }
 
 void forward(){

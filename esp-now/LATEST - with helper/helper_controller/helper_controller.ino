@@ -1,5 +1,9 @@
  #include "esp-now_helper.h"
 
+ //extern variables in the esp-now_helper library
+float allxposi[5], allyposi[5], allerro[5], allheadi[5];
+char x;
+int g; 
 
 void setup() {
   // put your setup code here, to run once:
