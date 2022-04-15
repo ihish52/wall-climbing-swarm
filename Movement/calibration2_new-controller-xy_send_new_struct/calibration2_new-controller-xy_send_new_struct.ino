@@ -10,25 +10,17 @@
 #include "Wire.h"
 #endif
 
-#include <esp-now_helper.h>
-
 #include <DMP_helper.h>
 #include <motor_controller.h>
 // #include "BluetoothSerial.h"
 
-//#include <esp_now.h>
-//#include <WiFi.h>
+#include <esp_now.h>
+#include <WiFi.h>
 
 // //BT serial comms
 // BluetoothSerial ESP_BT;
 char input,previnput;
 //BT command strings
-
-//extern variables in the esp-now_helper library
-float allxposi[5], allyposi[5], allerro[5], allheadi[5];
-float mallxposi[5], mallyposi[5], mallerro[5], mallheadi[5];
-char x;
-int g;
 
 #define FULL_SPEED 255
 #define Distance_measure 36.25
@@ -50,7 +42,7 @@ int test_counter = 0;
 DMP_helper DMP;
 float ypr[3];
 float heading = 0;
-float xpos = 0 , ypos = 0;
+float x = 0 , y = 0;
 float heading_ref = 0;
 float heading_error, heading_error_prev = 0;
 
@@ -59,8 +51,8 @@ const int offsetA = 1;
 const int offsetB = 1;
 
 //Motor definitions and variables
-float Kp = 5;
-float Kd = 0.0008;
+float Kp = 10;//5;
+float Kd = 0.002;//0.0008;
 Motor motorL = Motor(AIN2, AIN1, PWMA, offsetA, STBY, PWM_CH_A);
 Motor motorR = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
 
@@ -95,6 +87,41 @@ enum state{
 
 state current_state=STOP;
 
+typedef struct rec_slave {
+  int id;
+  float err;
+  float heading;
+  float xpos; 
+  float ypos; //x, y 
+} rec_slave;
+
+typedef struct send_struct {
+  char x; //movement 
+  float allerr[5]; //error
+  float allhead[5];
+  float allxpos[5];
+  float allypos[5]; //position (x,y)
+} send_struct;
+
+rec_slave datarec;
+send_struct datasend;
+
+uint8_t contrAddr[] = {0x00,0x00,0x00,0x00,0x00,0x00}; //{0x7C,0x9E,0xBD,0x49,0x00,0x04};  //{0x94,0x3C,0xC6,0x08,0x13,0x04};
+
+//callback function for when data is sent to master
+void sendmaster(const uint8_t *mac, esp_now_send_status_t status) {
+  //Serial.print("\r\nLast Packet Send Status:\t");
+  //Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+
+void afterrec(const uint8_t * mac_addr, const uint8_t *incomingData, int len){
+  memcpy(&datarec, incomingData, sizeof(datarec));
+  //Serial.println("hello");
+  if (datarec.id == 4){
+    input = datarec.err;
+    //Serial.println(input);
+  }
+}
 
 void setup() {
   
@@ -116,7 +143,26 @@ void setup() {
   // ESP_BT.begin("ESP32_plsfindme"); //bluetooth device name
 
   //setup ESP-NOW
-  setup_esp_now_master();
+  WiFi.mode(WIFI_STA);
+
+  if(esp_now_init() != ESP_OK){
+    Serial.println("Error :(");
+    return;
+  }
+
+  esp_now_register_recv_cb(afterrec);
+  esp_now_register_send_cb(sendmaster);
+
+  //register master
+  esp_now_peer_info_t peerInfo;
+  memcpy(peerInfo.peer_addr, contrAddr, 6);
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  if(esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Error adding peer");
+    return;
+  }
 
   Serial.println("START4");
 
@@ -138,33 +184,31 @@ long timer1 = millis();
 
 void loop() {
   
-  input = x;
   //for testing with controller
-  //datasend.xpos = xpos;
-  //datasend.ypos = ypos;
+  datasend.allxpos[0] = x;
+  datasend.allypos[0] = y;
   
   if (millis() - print_timer > PRINT_TIME)
   {
     Serial.print("input:");
-    Serial.println(x);
-    Serial.print("xpos: ");
-    Serial.print(xpos); //xpos
-    Serial.print(" ypos: ");
-    Serial.print(ypos);
+    Serial.println(input);
+    Serial.print("x: ");
+    Serial.print(datasend.allxpos[0]);
+    Serial.print(" y: ");
+    Serial.print(datasend.allypos[0]);
 
     print_enc();
 
     print_timer = millis();
   }
   
-  master_send(0,heading,xpos,ypos); 
 
-  /*if(millis() - timer1 > 75){  //75 
+  if(millis() - timer1 > 75){  //75 
     esp_err_t result = esp_now_send(0, (uint8_t *) &datasend, sizeof(send_struct));
-//    ESP_BT.write(datasend.xpos);
+//    ESP_BT.write(datasend.x);
     timer1 = millis();
     //print moved to print timer above
-  }*/
+  }
   
   //update position here commented out for now
   /*if ((current_state == FORWARD)||(current_state == REVERSE)){
@@ -307,8 +351,8 @@ void ResetEnc()
 
 void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
-  ypos += distance_moved *cos((MATH_PI/180)*(heading));
-  xpos += distance_moved * sin((MATH_PI/180)*heading);
+  y += distance_moved *cos((MATH_PI/180)*(heading));
+  x += distance_moved * sin((MATH_PI/180)*heading);
 
   //uncomment again when debugging is done
   counterL=0;
@@ -320,8 +364,8 @@ void UpdatePosition(){
   //Serial.println(x);
   //Serial.print("Y = ");
   //Serial.println(y);
-  //positions[datarec.id][0] = x;
-  //positions[datarec.id][1] = y;
+  positions[datarec.id][0] = x;
+  positions[datarec.id][1] = y;
 }
 
 void forward(){
