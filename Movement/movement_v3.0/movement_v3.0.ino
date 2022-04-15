@@ -42,6 +42,9 @@ int g;
 #define PRINT_TIME 1000
 long print_timer = millis();
 
+#define POSITION_UPDATE 20
+long position_timer = millis();
+
 bool calibrate = false;
 float positions[4][4] = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
@@ -59,8 +62,8 @@ const int offsetA = 1;
 const int offsetB = 1;
 
 //Motor definitions and variables
-float Kp = 5;
-float Kd = 0.0008;
+float Kp = 7;//5;
+float Kd = 0.001;//0.0008;
 Motor motorL = Motor(AIN2, AIN1, PWMA, offsetA, STBY, PWM_CH_A);
 Motor motorR = Motor(BIN1, BIN2, PWMB, offsetB, STBY, PWM_CH_B);
 
@@ -245,13 +248,13 @@ void loop() {
   }
   else if((input == 'L')&&(previnput!='L')){
     current_state = TURN;
-    heading_ref -= 5;
+    heading_ref -= 15;
     if(heading_ref < -179)
       heading_ref = 180;
   }
   else if((input == 'R')&&(previnput!='R')){
     current_state = TURN;
-    heading_ref += 5;
+    heading_ref += 15;
     if(heading_ref > 180)
       heading_ref = -179;  
   }
@@ -261,11 +264,14 @@ void loop() {
       stopp();
   }
 
+  //testing always update position below
+  /*
   //reset encoder ticks and update position after forward or backward movement stops only
   if (input == 'X' && previnput == 'U') UpdatePosition();
   else if (input == 'X' && previnput == 'D') UpdatePosition();
   else if (input == 'X' && previnput == 'L') ResetEnc(); //reset enc without updating position
   else if (input == 'X' && previnput == 'R') ResetEnc();
+  */
 
   previnput=input;
 
@@ -290,7 +296,12 @@ void loop() {
   motorR.drive(driveR);
   
   heading_error_prev = heading_error;
-  //UpdatePosition();
+  
+  if (millis() - position_timer > POSITION_UPDATE)
+  {
+    UpdatePosition();
+    position_timer = millis();
+  }
   
   //Serial.println(heading_ref);
 

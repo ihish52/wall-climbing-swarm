@@ -6,7 +6,7 @@ uint8_t slaveAddress2[] = {0x94,0x3C,0xC6,0x08,0x13,0x04};
 uint8_t slaveAddress3[] = {0x7C,0x9E,0xBD,0x48,0xB5,0x04};
 uint8_t contrAddress[] =  {0x7C,0x9E,0xBD,0x49,0x00,0x04};  //{0x94,0x3C,0xC6,0x08,0x13,0x04};
 
-uint8_t masterAddress[] = {0x30,0x83,0x98,0x53,0xBB,0x24};//{0x84,0xCC,0xA8,0x01,0x03,0x20};
+uint8_t masterAddress[] = {0x84,0xCC,0xA8,0x01,0x03,0x20};//{0x30,0x83,0x98,0x53,0xBB,0x24}; //(robot 1)//{0x84,0xCC,0xA8,0x01,0x03,0x20}; (silver cable)
 
 //fix struct for controller, master and slave
 all_struct send_slave;
@@ -33,6 +33,9 @@ int right = 0;
 //from slave code
 extern float allxposi[5], allyposi[5], allerro[5], allheadi[5];
 extern char x;
+extern int g; //can delete after test
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //checks if slaves received data
 void send2slave(const uint8_t *mac, esp_now_send_status_t status) {
@@ -40,6 +43,8 @@ void send2slave(const uint8_t *mac, esp_now_send_status_t status) {
 /*   Serial.print(" send status:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Yay :D":"Oh no :("); */
 //  Serial.println("sent");
+	g += 1; //can delete
+	
 }
 
 void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len) {
@@ -50,6 +55,7 @@ void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len
   if (rec_slave.id == 4) {
     send_slave.x = rec_slave.err; //movement command
 	/* Serial.println(send_slave.x); */
+	x = send_slave.x;
   }
 
   //updating data
@@ -77,7 +83,7 @@ void setup_esp_now_master()
   esp_now_register_recv_cb(recfromslave);
 
   //register slaves
-  esp_now_peer_info_t slaveinfo;
+  esp_now_peer_info_t slaveinfo = {};
   slaveinfo.channel = 0;
   slaveinfo.encrypt = false;
 
@@ -117,13 +123,13 @@ void master_send(float err, float heading, float xpos, float ypos)
   send_slave.allxpos[0] = xpos;
   send_slave.allypos[0] = ypos;
   
-  
   if(millis() - timer_master > 120){  //75 
-    esp_err_t result = esp_now_send(0, (uint8_t *) &send_slave, sizeof(send_slave));
+    esp_err_t result = esp_now_send(0, (uint8_t *) &send_slave, sizeof(send_slave)); //0 //contrAddress
     timer_master = millis();
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 //functions from slave code
 
 //callback function for when data is received
@@ -132,13 +138,15 @@ void recfrommaster(const uint8_t * mac, const uint8_t *incoming, int len) {
 //  Serial.println("rec");
   //copy data from incoming to data struct
   memcpy(&rec_master, incoming, sizeof(rec_master));
-  memcpy(allxposi, rec_master.allxpos, sizeof(rec_master.allxpos));
-  memcpy(allyposi, rec_master.allypos, sizeof(rec_master.allypos));
   memcpy(allerro, rec_master.allerr, sizeof(rec_master.allerr));
   memcpy(allheadi, rec_master.allhead, sizeof(rec_master.allhead));
+  memcpy(allxposi, rec_master.allxpos, sizeof(rec_master.allxpos));
+  memcpy(allyposi, rec_master.allypos, sizeof(rec_master.allypos));
 
   x = rec_master.x; //movement
   /* Serial.println(x); */
+  
+  //allheadi[0] = rec_master.allhead[0];
 
 }
 
@@ -190,7 +198,7 @@ void slave_send(int id, float err, float heading, float xpos, float ypos)
   }
 }
 
-//code from controller
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //setup for controller
 void setup_esp_now_controller() {
@@ -249,6 +257,8 @@ void controller_send() {
   else {
     send_master.err = 'X';
   }
+  
+  x = send_master.err; //for testing
 
   if(millis() - timer_cont > 120) {
     esp_err_t result = esp_now_send(masterAddress, (uint8_t *) &send_master, sizeof(send_master));

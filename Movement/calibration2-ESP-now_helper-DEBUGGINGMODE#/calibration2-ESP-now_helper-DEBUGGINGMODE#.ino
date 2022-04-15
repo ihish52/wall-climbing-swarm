@@ -12,7 +12,7 @@
 
 #include <esp-now_helper.h>
 
-#include <DMP_helper.h>
+//#include <DMP_helper.h>
 #include <motor_controller.h>
 // #include "BluetoothSerial.h"
 
@@ -47,7 +47,7 @@ float positions[4][4] = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
 int test_counter = 0;
 
-DMP_helper DMP;
+//DMP_helper DMP;
 float ypr[3];
 float heading = 0;
 float xpos = 0 , ypos = 0;
@@ -87,7 +87,7 @@ uint32_t timer = millis();
 
 //debug print functions
 void print_enc();
-void print_acc();
+//void print_acc();
 
 enum state{
   FORWARD, REVERSE, TURN, STOP
@@ -105,7 +105,7 @@ void setup() {
   //while (!Serial);
 
   //setup gyro acc
-  DMP.DMP_setup();
+  //.DMP_setup();
   Serial.println("START2");
 
   //setup motors and driver
@@ -148,7 +148,7 @@ void loop() {
     Serial.print("input:");
     Serial.println(x);
     Serial.print("xpos: ");
-    Serial.print(xpos); //xpos
+    Serial.print(g); //xpos
     Serial.print(" ypos: ");
     Serial.print(ypos);
 
@@ -157,7 +157,7 @@ void loop() {
     print_timer = millis();
   }
   
-  master_send(0,heading,xpos,ypos); 
+  master_send(1,2,6,7); 
 
   /*if(millis() - timer1 > 75){  //75 
     esp_err_t result = esp_now_send(0, (uint8_t *) &datasend, sizeof(send_struct));
@@ -186,8 +186,9 @@ void loop() {
   // }
 
   //store current heading in array from DMP
-  DMP.ypr_pitch_bound(ypr[0], ypr[1], ypr[2]);
-  heading = ypr[2];
+  //DMP.ypr_pitch_bound(ypr[0], ypr[1], ypr[2]);
+  //heading = ypr[2];
+  heading = 0;
   heading_error = heading - heading_ref;
   
   //PD controller
@@ -360,7 +361,7 @@ void print_enc()
 }
 
 //print yaw pitch roll values from DMP
-void print_acc()
+/*void print_acc()
 {
   //DMP.ypr_pitch_bound(ypr[0], ypr[1], ypr[2]);
   Serial.print(ypr[0]);
@@ -368,4 +369,4 @@ void print_acc()
   Serial.print(ypr[1]);
   Serial.print("/");
   Serial.println(ypr[2]); //Roll on X axis
-}
+}*/
