@@ -18,8 +18,8 @@
 #define Distance_constant Distance_measure/Encoder_ticks
 #define MATH_PI 3.141592653589793
 
-#define MAX_ROBOT_NUM 4
-#define calibrate_ticks 5000
+#define MAX_ROBOT_NUM 2
+#define CALIBRATE_DIST 10
 
 #define PRINT_TIME 1000
 
@@ -40,18 +40,19 @@ bool cluster = false; //default off
 char input,previnput;
 
 //extern variables in the esp-now_helper library
-float allxposi[5], allyposi[5], allerro[5], allheadi[5];
+float allxposi[5], allyposi[5], allerro[5], allheadi[5] = {-1,-1,-1,-1,-1};
 char x;
 int g;
+all_struct send_slave;
 
 long position_timer = millis();
 long print_timer = millis();
 
 //calibration variables
-bool calibrate = false;
+bool calibrate = true;
 float positions[4][4] = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
-int test_counter = 0;
+int test_counter = 1;
 
 //DMP and heading error variables
 DMP_helper DMP;
@@ -108,6 +109,14 @@ void setup() {
   Wire.setClock(400000);
   Serial.begin(9600); //9600
 
+  //initialize allpos variables -- MASTER
+  for (int i =0; i<5; i++)
+  {
+    send_slave.allypos[i] = -1;
+    send_slave.allxpos[i] = -1;
+  }
+  
+
   //setup gyro acc
   DMP.DMP_setup();
 
@@ -131,6 +140,8 @@ void isr_a()
 }
 
 void loop() {
+
+  //x = 'U';
   
   input = x;
   
@@ -144,6 +155,9 @@ void loop() {
     Serial.println(ypos);
     Serial.print("heading:");
     Serial.println(heading); //heading
+
+    Serial.println(send_slave.allypos[0]);
+    Serial.println(send_slave.allypos[MAX_ROBOT_NUM-1]);
 
     print_enc();
 
@@ -167,12 +181,12 @@ void loop() {
   elapsed_timer_PID = timer_PID - timer_PID_prev;
 
   //Follow the leader mode - on by default after calibration
-  if(input == 'FTL' && FTL == false) FTL = true; // press FTL once to turn on
-  if (input == 'FTL' && FTL == true) FTL = false; // press FTL twice to turn off
+  //if(input == 'FTL' && FTL == false) FTL = true; // press FTL once to turn on
+  //if (input == 'FTL' && FTL == true) FTL = false; // press FTL twice to turn off
 
   //Clustering control - press clustering button to toggle clustering on and off
-  if(input == 'clustering' && cluster == false) cluster = true; 
-  if (input == 'clustering' && cluster == true) cluster = false; 
+  //if(input == 'clustering' && cluster == false) cluster = true; 
+  //if (input == 'clustering' && cluster == true) cluster = false; 
 
   //calibrate code deactivated because calibrate bool initialized to false
   if (calibrate == true)
@@ -180,22 +194,26 @@ void loop() {
     if (millis() - calibrate_timer > 3000){
       //check y position of each robot
       //initialize slave y positions with -1
-      if (allyposi[0] == 0 || allyposi[1] == 0 || allyposi[2] == 0 || allyposi[3] == 0) 
+      if (send_slave.allypos[0] == 0 || send_slave.allypos[MAX_ROBOT_NUM-1] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
       {
+        Serial.println("HERE");
+        Serial.println(send_slave.allypos[0]);
+        Serial.println(send_slave.allypos[MAX_ROBOT_NUM-1]);
+        Serial.println(g);
+        
         current_state=FORWARD;
         forward();
 
       }
-      if (counterAVG > calibrate_ticks){
+      if (ypos > CALIBRATE_DIST*test_counter){
         current_state=STOP;
         stopp();
-        counterL = 0;
-        counterR = 0;
-        counterAVG = 0;
+        ResetEnc();
+        Serial.println("STOP");
 
-        if (allyposi[3] != 0) calibrate = false;
+        if (send_slave.allypos[MAX_ROBOT_NUM-1] != 0 && send_slave.allypos[MAX_ROBOT_NUM-1] != -1) calibrate = false;
 
-        positions[test_counter+1][1] = 0;
+        //positions[test_counter+1][1] = 0;
         test_counter++;   
       }
       
@@ -240,7 +258,6 @@ void loop() {
       stopp();
   }
 
-  previnput=input;
 
   /*if(fw_flag == true){
     forward();
@@ -252,9 +269,9 @@ void loop() {
     }
   }*/
 
-
-
   }
+
+  previnput=input;
 
   turn();
 
@@ -294,14 +311,6 @@ void UpdatePosition(){
   counterL=0;
   counterR=0;
   counterAVG=0;
-
-  //prints performed in print timer in loop
-  //Serial.print("X = ");
-  //Serial.println(x);
-  //Serial.print("Y = ");
-  //Serial.println(y);
-  //positions[datarec.id][0] = x;
-  //positions[datarec.id][1] = y;
 }
 
 void forward(){

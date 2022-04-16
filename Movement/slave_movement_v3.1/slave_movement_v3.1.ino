@@ -1,4 +1,7 @@
-// code for the master
+// code for slave
+
+#include <math.h>
+
 #ifndef I2CDEV_H
 #define I2CDEV_H
 #include "I2Cdev.h"
@@ -20,14 +23,17 @@
 #define Distance_constant Distance_measure/Encoder_ticks
 #define MATH_PI 3.141592653589793
 
-#define MAX_ROBOT_NUM 4
-#define calibrate_ticks 5000
+#define MAX_ROBOT_NUM 2
+#define CALIBRATE_DIST 10
 
 #define PRINT_TIME 1000
 
 #define POSITION_UPDATE 20
 
 #define FTL_TICKS 50
+#define BUTTON_COOLDOWN 3000
+
+#define CLUSTER_CLR 7
 
 #include <esp-now_helper.h>
 #include <DMP_helper.h>
@@ -35,6 +41,7 @@
 
 //FTL variables
 bool FTL = true;
+long button_mode_timer = millis();
 
 //Clustering variables
 bool cluster = false; //default off
@@ -45,7 +52,7 @@ float m_s_heading = 0;
 char input,previnput;
 
 //extern variables in the esp-now_helper library
-float allxposi[5], allyposi[5], allerro[5], allheadi[5];
+float allxposi[5], allyposi[5], allerro[5], allheadi[5] = {-1,-1,-1,-1,-1};
 char x;
 int g;
 
@@ -56,7 +63,7 @@ long print_timer = millis();
 bool calibrate = true;
 float positions[4][4] = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
-int test_counter = 0;
+int test_counter = 1;
 
 //DMP and heading error variables
 DMP_helper DMP;
@@ -121,7 +128,7 @@ void setup() {
 
   //setup ESP-NOW
   //setup_esp_now_master();
-  setup_esp_now_slave(ID, 0, heading, xpos, ypos);
+  setup_esp_now_slave();
 
   //attach same ISR to encoder outputs
   attachInterrupt(outputA1, isr_a, CHANGE);
@@ -154,7 +161,7 @@ void loop() {
     print_timer = millis();
   }
   
-  master_send(0,heading,xpos,ypos); 
+  slave_send(ID, 0, heading, xpos, ypos);
 
   //calculate average of encoder counters LR
   counterAVG = ((counterR)-(counterL))/2.0;
@@ -169,13 +176,20 @@ void loop() {
   timer_PID = millis();
   elapsed_timer_PID = timer_PID - timer_PID_prev;
 
-  //Follow the leader mode - on by default after calibration
-  if(input == 'FTL' && FTL == false) FTL = true; // press FTL once to turn on
-  if (input == 'FTL' && FTL == true) FTL = false; // press FTL twice to turn off
+  //allow button press after cooldown timer
+  //if (millis() - button_mode_timer > BUTTON_COOLDOWN)
+  //{
+    //Follow the leader mode - on by default after calibration
+    if(input == 'T' && FTL == false && previnput != 'T') FTL = true; // press FTL once to turn on
+    else if (input == 'T' && FTL == true  && previnput != 'T') FTL = false; // press FTL twice to turn off
 
-  //Clustering control - press clustering button to toggle clustering on and off
-  if(input == 'clustering' && cluster == false) cluster = true; 
-  if (input == 'clustering' && cluster == true) cluster = false; 
+    //Clustering control - press clustering button to toggle clustering on and off
+    if(input == 'S' && cluster == false  && previnput != 'S') cluster = true; 
+    else if (input == 'S' && cluster == true  && previnput != 'S') cluster = false;
+
+    //button_mode_timer = millis();
+  //}
+   
 
   //calibrate code deactivated because calibrate bool initialized to false
   if (calibrate == true)
@@ -183,22 +197,24 @@ void loop() {
     if (millis() - calibrate_timer > 3000){
       //check y position of each robot
       //initialize slave y positions with -1
-      if (allyposi[0] == 0 || allyposi[1] == 0 || allyposi[2] == 0 || allyposi[3] == 0) 
+      if (allyposi[0] == -1 || allyposi[MAX_ROBOT_NUM-1] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
       {
+        Serial.println("HERE");
+        Serial.println(allyposi[0]);
+        Serial.println(allyposi[1]);
+        
         current_state=FORWARD;
         forward();
 
       }
-      if (counterAVG > calibrate_ticks){
+      if (ypos > CALIBRATE_DIST*test_counter){
         current_state=STOP;
         stopp();
-        counterL = 0;
-        counterR = 0;
-        counterAVG = 0;
+        ResetEnc();
 
-        if (allyposi[3] != -1) calibrate = false;
+        if (allyposi[MAX_ROBOT_NUM-1] != 0 && allyposi[MAX_ROBOT_NUM-1] != -1) calibrate = false;
 
-        positions[test_counter+1][1] = 0;
+        //positions[test_counter+1][1] = 0;
         test_counter++;   
       }
       
@@ -208,6 +224,7 @@ void loop() {
   //MASTER FTL code
   else if (FTL == true)
   {
+    Serial.println("FOLLOW MODE");
     //master_send() above already sends command character from remote
     //slave uses these as controller commands
       if(input == 'U'){
@@ -239,19 +256,31 @@ void loop() {
           stopp();
       }
 
-      previnput=input;
+      
   }
 
   else if (cluster == true)
   {
+    Serial.println("CLUSTER MODE");
     //calculate slave's heading to master's x,y coordinates
     m_s_ypos = allyposi[0] - allyposi[ID];
     m_s_xpos = allxposi[0] - allxposi[ID];
 
     //calculate slave's heading from 0 to the master
-    m_s_heading = atan2(m_s_xpos/m_s_ypos);
+    m_s_heading = atan2(m_s_xpos,m_s_ypos);
 
-    
+    heading_ref = m_s_heading;
+
+    if (abs(allxposi[0] - allxposi[ID]) < CLUSTER_CLR && abs(allyposi[0] - allyposi[ID]) < CLUSTER_CLR)
+    {
+      current_state=STOP;
+      stopp();
+    }
+    else
+    {
+      current_state=FORWARD;
+      forward();
+    }
   }
 
   else
@@ -259,6 +288,8 @@ void loop() {
     current_state=STOP;
     stopp();
   }
+
+  previnput=input;
 
   turn();
 
@@ -298,14 +329,6 @@ void UpdatePosition(){
   counterL=0;
   counterR=0;
   counterAVG=0;
-
-  //prints performed in print timer in loop
-  //Serial.print("X = ");
-  //Serial.println(x);
-  //Serial.print("Y = ");
-  //Serial.println(y);
-  //positions[datarec.id][0] = x;
-  //positions[datarec.id][1] = y;
 }
 
 void forward(){
