@@ -20,13 +20,36 @@ void loop() {
 
   if (millis() - print_timer > PRINT_TIME)
   {
+    Serial.println("Master (0):");
+    Serial.print("xy: ");
     Serial.print(allxposi[0]);
-    Serial.print(',');
+    Serial.print(" , ");
     Serial.println(allyposi[0]);
-    Serial.println(allheadi[0]); 
+    Serial.print("heading: ");
+    Serial.println(allheadi[0]);
+    Serial.print("cmd: ");
     Serial.println(x);
-    //Serial.println(d);
-    
+    Serial.print("err: ");
+    Serial.println(allerro[0]);
+
+    Serial.println();
+    Serial.println();
+
+    Serial.println("Slave (1):");
+    Serial.print("xy: ");
+    Serial.print(allxposi[1]);
+    Serial.print(" , ");
+    Serial.println(allyposi[1]);
+    Serial.print("heading: ");
+    Serial.println(allheadi[1]);
+    Serial.print("cmd: ");
+    Serial.println(x);
+    Serial.print("err: ");
+    Serial.println(allerro[1]);
+
+    Serial.println();
+    Serial.println();
+
     print_timer = millis();
   }
 

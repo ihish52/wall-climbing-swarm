@@ -16,6 +16,7 @@
 
 #define KP 7
 #define KD 0.001
+#define KT 0.05
 
 #define FULL_SPEED 255
 #define Distance_measure 36.25
@@ -24,23 +25,31 @@
 #define MATH_PI 3.141592653589793
 
 #define MAX_ROBOT_NUM 2
-#define CALIBRATE_DIST 10
+#define CALIBRATE_DIST 15
 
 #define PRINT_TIME 1000
 
 #define POSITION_UPDATE 20
 
-#define FTL_TICKS 50
+#define FIF_TICKS 50
 #define BUTTON_COOLDOWN 3000
 
-#define CLUSTER_CLR 7
+#define FTL_STOP_DIST 20
+
+#define CLUSTER_CLR 20
 
 #include <esp-now_helper.h>
 #include <DMP_helper.h>
 #include <motor_controller.h>
 
+//encoder ticks correction gain
+float Kt = KT;
+
 //FTL variables
-bool FTL = true;
+bool FTL = false;
+
+//FIF variables
+bool FIF = true;
 long button_mode_timer = millis();
 
 //Clustering variables
@@ -162,7 +171,7 @@ void loop() {
     print_timer = millis();
   }
   
-  slave_send(ID, 0, heading, xpos, ypos);
+  slave_send(ID, m_s_dist, heading, xpos, ypos);
 
   //calculate average of encoder counters LR
   counterAVG = ((counterR)-(counterL))/2.0;
@@ -177,20 +186,18 @@ void loop() {
   timer_PID = millis();
   elapsed_timer_PID = timer_PID - timer_PID_prev;
 
-  //allow button press after cooldown timer
-  //if (millis() - button_mode_timer > BUTTON_COOLDOWN)
-  //{
-    //Follow the leader mode - on by default after calibration
-    if(input == 'T' && FTL == false && previnput != 'T') FTL = true; // press FTL once to turn on
-    else if (input == 'T' && FTL == true  && previnput != 'T') FTL = false; // press FTL twice to turn off
+    //Follow in formation mode - on by default after calibration
+    if(input == 'T' && FIF == false && previnput != 'T') FIF = true; // press FIF once to turn on
+    else if (input == 'T' && FIF == true  && previnput != 'T') FIF = false; // press FIF twice to turn off
+
+    //Follow in formation mode - on by default after calibration
+    //if(input == 'T' && FTL == false && previnput != 'T') FTL = true; // press FTL once to turn on
+    //else if (input == 'T' && FTL == true  && previnput != 'T') FTL = false; // press FTL twice to turn off
 
     //Clustering control - press clustering button to toggle clustering on and off
     if(input == 'S' && cluster == false  && previnput != 'S') cluster = true; 
     else if (input == 'S' && cluster == true  && previnput != 'S') cluster = false;
 
-    //button_mode_timer = millis();
-  //}
-   
 
   //calibrate code deactivated because calibrate bool initialized to false
   if (calibrate == true)
@@ -222,8 +229,8 @@ void loop() {
     }
   }
 
-  //MASTER FTL code
-  else if (FTL == true)
+  //MASTER FIF code
+  else if (FIF == true)
   {
     //Serial.println("FOLLOW MODE");
     //master_send() above already sends command character from remote
@@ -260,6 +267,31 @@ void loop() {
       
   }
 
+  else if (FTL == true)
+  {
+    m_s_ypos = allyposi[0] - allyposi[ID];
+    m_s_xpos = allxposi[0] - allxposi[ID];
+
+    m_s_dist = sqrt(pow(m_s_xpos,2)+pow(m_s_ypos,2));
+
+    //calculate slave's heading from 0 to the master
+    m_s_heading = (180/MATH_PI)*atan2(m_s_xpos,m_s_ypos);
+
+    heading_ref = m_s_heading;
+
+    if (m_s_dist<= FTL_STOP_DIST)
+    {
+      current_state=STOP;
+      stopp();
+    }
+    else
+    {
+      current_state=FORWARD;
+      forward();
+    }
+
+  }
+
   else if (cluster == true)
   {
     //Serial.println("CLUSTER MODE");
@@ -274,7 +306,7 @@ void loop() {
 
     heading_ref = m_s_heading;
 
-    Serial.println(heading_ref);
+    //Serial.println(heading_ref);
 
     //if (abs(allxposi[0] - allxposi[ID]) < CLUSTER_CLR && abs(allyposi[0] - allyposi[ID]) < CLUSTER_CLR)
     if (m_s_dist<= CLUSTER_CLR)
@@ -301,17 +333,20 @@ void loop() {
 
   driveL = constrain((200*speedL + controlL), -255, 255);
   driveR = constrain((-200*speedR + controlR), -255, 255);
-  
-  motorL.drive(driveL);
-  motorR.drive(driveR);
-  
-  heading_error_prev = heading_error;
-  
+
   if (millis() - position_timer > POSITION_UPDATE)
   {
     UpdatePosition();
     position_timer = millis();
   }
+
+  if (abs(counterL) > abs(counterR)) driveL = constrain(driveL - ((abs(counterL) - abs(counterR))*Kt), -255, 255);
+  else if (abs(counterR) > abs(counterL)) driveR = constrain(driveR - ((abs(counterR) - abs(counterL))*Kt), -255, 255);
+  
+  motorL.drive(driveL);
+  motorR.drive(driveR);
+  
+  heading_error_prev = heading_error;
   
   //Serial.println(heading_ref);
 

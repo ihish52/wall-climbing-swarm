@@ -1,7 +1,4 @@
-// code for slave
-
-#include <math.h>
-
+// code for the master
 #ifndef I2CDEV_H
 #define I2CDEV_H
 #include "I2Cdev.h"
@@ -11,9 +8,7 @@
 #define WIRE_H
 #include "Wire.h"
 #endif
-
-#define ID 1
-
+ 
 #define KP 7
 #define KD 0.001
 
@@ -31,24 +26,16 @@
 #define POSITION_UPDATE 20
 
 #define FTL_TICKS 50
-#define BUTTON_COOLDOWN 3000
-
-#define CLUSTER_CLR 7
 
 #include <esp-now_helper.h>
 #include <DMP_helper.h>
 #include <motor_controller.h>
 
 //FTL variables
-bool FTL = true;
-long button_mode_timer = millis();
+bool FTL = false;
 
 //Clustering variables
 bool cluster = false; //default off
-float m_s_ypos = 0;
-float m_s_xpos = 0;
-float m_s_dist = 0;
-float m_s_heading = 0;
 
 char input,previnput;
 
@@ -56,6 +43,7 @@ char input,previnput;
 float allxposi[5], allyposi[5], allerro[5], allheadi[5] = {-1,-1,-1,-1,-1};
 char x;
 int g;
+all_struct send_slave;
 
 long position_timer = millis();
 long print_timer = millis();
@@ -121,6 +109,14 @@ void setup() {
   Wire.setClock(400000);
   Serial.begin(9600); //9600
 
+  //initialize allpos variables -- MASTER
+  for (int i =0; i<5; i++)
+  {
+    send_slave.allypos[i] = -1;
+    send_slave.allxpos[i] = -1;
+  }
+  
+
   //setup gyro acc
   DMP.DMP_setup();
 
@@ -128,8 +124,7 @@ void setup() {
   setupMotors();
 
   //setup ESP-NOW
-  //setup_esp_now_master();
-  setup_esp_now_slave();
+  setup_esp_now_master();
 
   //attach same ISR to encoder outputs
   attachInterrupt(outputA1, isr_a, CHANGE);
@@ -145,6 +140,8 @@ void isr_a()
 }
 
 void loop() {
+
+  //x = 'U';
   
   input = x;
   
@@ -155,14 +152,20 @@ void loop() {
     Serial.print("xpos: ");
     Serial.print(xpos); //xpos
     Serial.print(" ypos: ");
-    Serial.print(ypos);
+    Serial.println(ypos);
+    Serial.print("heading:");
+    Serial.println(heading); //heading
+
+    Serial.println(send_slave.allypos[0]);
+    Serial.println(send_slave.allypos[MAX_ROBOT_NUM-1]);
 
     print_enc();
 
     print_timer = millis();
   }
+
   
-  slave_send(ID, 0, heading, xpos, ypos);
+  master_send(0,heading,xpos,ypos);
 
   //calculate average of encoder counters LR
   counterAVG = ((counterR)-(counterL))/2.0;
@@ -177,20 +180,13 @@ void loop() {
   timer_PID = millis();
   elapsed_timer_PID = timer_PID - timer_PID_prev;
 
-  //allow button press after cooldown timer
-  //if (millis() - button_mode_timer > BUTTON_COOLDOWN)
-  //{
-    //Follow the leader mode - on by default after calibration
-    if(input == 'T' && FTL == false && previnput != 'T') FTL = true; // press FTL once to turn on
-    else if (input == 'T' && FTL == true  && previnput != 'T') FTL = false; // press FTL twice to turn off
+  //Follow the leader mode - on by default after calibration
+  //if(input == 'FTL' && FTL == false) FTL = true; // press FTL once to turn on
+  //if (input == 'FTL' && FTL == true) FTL = false; // press FTL twice to turn off
 
-    //Clustering control - press clustering button to toggle clustering on and off
-    if(input == 'S' && cluster == false  && previnput != 'S') cluster = true; 
-    else if (input == 'S' && cluster == true  && previnput != 'S') cluster = false;
-
-    //button_mode_timer = millis();
-  //}
-   
+  //Clustering control - press clustering button to toggle clustering on and off
+  //if(input == 'clustering' && cluster == false) cluster = true; 
+  //if (input == 'clustering' && cluster == true) cluster = false; 
 
   //calibrate code deactivated because calibrate bool initialized to false
   if (calibrate == true)
@@ -198,11 +194,12 @@ void loop() {
     if (millis() - calibrate_timer > 3000){
       //check y position of each robot
       //initialize slave y positions with -1
-      if (allyposi[0] == -1 || allyposi[MAX_ROBOT_NUM-1] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
+      if (send_slave.allypos[0] == 0 || send_slave.allypos[MAX_ROBOT_NUM-1] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
       {
-        Serial.println("HERE");
-        Serial.println(allyposi[0]);
-        Serial.println(allyposi[1]);
+        //Serial.println("HERE");
+        //Serial.println(send_slave.allypos[0]);
+        //Serial.println(send_slave.allypos[MAX_ROBOT_NUM-1]);
+        //Serial.println(g);
         
         current_state=FORWARD;
         forward();
@@ -212,8 +209,9 @@ void loop() {
         current_state=STOP;
         stopp();
         ResetEnc();
+        Serial.println("STOP");
 
-        if (allyposi[MAX_ROBOT_NUM-1] != 0 && allyposi[MAX_ROBOT_NUM-1] != -1) calibrate = false;
+        if (send_slave.allypos[MAX_ROBOT_NUM-1] != 0 && send_slave.allypos[MAX_ROBOT_NUM-1] != -1) calibrate = false;
 
         //positions[test_counter+1][1] = 0;
         test_counter++;   
@@ -222,77 +220,55 @@ void loop() {
     }
   }
 
-  //MASTER FTL code
+  //MASTER FTL code - master does not need this flag true as code is empty
   else if (FTL == true)
   {
-    //Serial.println("FOLLOW MODE");
     //master_send() above already sends command character from remote
     //slave uses these as controller commands
-      if(input == 'U'){
-        current_state=FORWARD;
-        if(previnput !='U'){
-        }
-        forward();
-      }
-      else if (input == 'D'){
-        current_state=REVERSE;
-        if(previnput !='D'){
-        }
-        reverse();
-      }
-      else if((input == 'L')&&(previnput!='L')){
-        current_state = TURN;
-        heading_ref -= 15;
-        if(heading_ref < -179)
-          heading_ref = 180;
-      }
-      else if((input == 'R')&&(previnput!='R')){
-        current_state = TURN;
-        heading_ref += 15;
-        if(heading_ref > 180)
-          heading_ref = -179;  
-      }
-      else{
-        current_state=STOP;
-          stopp();
-      }
-
-      
-  }
-
-  else if (cluster == true)
-  {
-    //Serial.println("CLUSTER MODE");
-    //calculate slave's heading to master's x,y coordinates
-    m_s_ypos = allyposi[0] - allyposi[ID];
-    m_s_xpos = allxposi[0] - allxposi[ID];
-
-    m_s_dist = sqrt(pow(m_s_xpos,2)+pow(m_s_ypos,2));
-
-    //calculate slave's heading from 0 to the master
-    m_s_heading = (180/MATH_PI)*atan2(m_s_xpos,m_s_ypos);
-
-    heading_ref = m_s_heading;
-
-    Serial.println(heading_ref);
-
-    //if (abs(allxposi[0] - allxposi[ID]) < CLUSTER_CLR && abs(allyposi[0] - allyposi[ID]) < CLUSTER_CLR)
-    if (m_s_dist<= CLUSTER_CLR)
-    {
-      current_state=STOP;
-      stopp();
-    }
-    else
-    {
-      current_state=FORWARD;
-      forward();
-    }
   }
 
   else
   {
+  if(input == 'U'){
+    current_state=FORWARD;
+    if(previnput !='U'){
+    }
+    forward();
+  }
+  else if (input == 'D'){
+    current_state=REVERSE;
+    if(previnput !='D'){
+    }
+    reverse();
+  }
+  else if((input == 'L')&&(previnput!='L')){
+    current_state = TURN;
+    heading_ref -= 15;
+    if(heading_ref < -179)
+      heading_ref = 180;
+  }
+  else if((input == 'R')&&(previnput!='R')){
+    current_state = TURN;
+    heading_ref += 15;
+    if(heading_ref > 180)
+      heading_ref = -179;  
+  }
+  else{
     current_state=STOP;
-    stopp();
+      stopp();
+  }
+
+
+  /*if(fw_flag == true){
+    forward();
+    print_enc();
+    if(counterAVG * Distance_constant > 10){
+      fw_flag = false;
+      counterL = 0;
+      counterR = 0;
+    }
+  }*/
+
   }
 
   previnput=input;
@@ -301,21 +277,26 @@ void loop() {
 
   driveL = constrain((200*speedL + controlL), -255, 255);
   driveR = constrain((-200*speedR + controlR), -255, 255);
-  
-  motorL.drive(driveL);
-  motorR.drive(driveR);
-  
-  heading_error_prev = heading_error;
-  
+
   if (millis() - position_timer > POSITION_UPDATE)
   {
     UpdatePosition();
     position_timer = millis();
   }
+
+  if (abs(counterL) > abs(counterR)) driveL = 0;
+  else if (abs(counterR) > abs(counterL)) driveR = 0;
+
+  Serial.println("HERE");
+  Serial.println(counterL);
+  Serial.println(counterR);
+
+  motorL.drive(driveL);
+  motorR.drive(driveR);
+  
+  heading_error_prev = heading_error;
   
   //Serial.println(heading_ref);
-
-
 }
 
 //reset encoders after turning without updating position
@@ -360,6 +341,9 @@ void turn(){
     controlR = Kp*heading_error + Kd*(heading_error - heading_error_prev);
     controlL = -controlR;
   }
+
+  // if (counterL > counterR) stopLeft
+
 }
 
 //printer encoder counter values
