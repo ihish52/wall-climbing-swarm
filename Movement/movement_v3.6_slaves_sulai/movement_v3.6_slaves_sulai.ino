@@ -319,8 +319,8 @@ void UpdatePosition(){
   float distance_moved = counterAVG*Distance_constant;
   float R = (Axel_length/2)*((Vl+Vr)/(Vr-Vl));
   float w = (Vr-Vl)/Axel_length;
-  float ICCx = xpos - (R*sin((MATH_PI/180)*heading);
-  float ICCy = ypos - (R*cos((MATH_PI/180)*heading);
+  float ICCx = xpos - (R*sin((MATH_PI/180)*heading));
+  float ICCy = ypos + (R*cos((MATH_PI/180)*heading));
 
   xpos = ((cos(w*POSITION_UPDATE))*(xpos - ICCx))+((-sin(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCx;
   ypos = ((sin(w*POSITION_UPDATE))*(xpos - ICCx))+((cos(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCy;
