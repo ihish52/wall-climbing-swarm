@@ -12,7 +12,7 @@
 #include "Wire.h"
 #endif
 
-#define ID 2
+#define ID 1
 
 #define KP 7
 #define KD 0.001
@@ -173,7 +173,7 @@ void loop() {
     print_timer = millis();
   }
   
-  slave_send(ID, m_s_dist, heading, xpos, ypos);
+  slave_send(ID, m_s_dist, heading, xpos, ypos);//(ID, 9,10,11,12);
 
   //calculate average of encoder counters LR
   counterAVG = ((counterR)-(counterL))/2.0;
@@ -344,8 +344,8 @@ void loop() {
     position_timer = millis();
   }
 
-  if (abs(counterL) > abs(counterR)) driveL = constrain(driveL - ((abs(counterL) - abs(counterR))*Kt), -255, 255);
-  else if (abs(counterR) > abs(counterL)) driveR = constrain(driveR - ((abs(counterR) - abs(counterL))*Kt), -255, 255);
+  //if (abs(counterL) > abs(counterR)) driveL = constrain(driveL - ((abs(counterL) - abs(counterR))*Kt), -255, 255);
+  //else if (abs(counterR) > abs(counterL)) driveR = constrain(driveR - ((abs(counterR) - abs(counterL))*Kt), -255, 255);
   
   motorL.drive(driveL);
   motorR.drive(driveR);

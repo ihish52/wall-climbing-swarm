@@ -12,10 +12,9 @@
 #include "Wire.h"
 #endif
 
-#define Axel_length 14//7.4
-float prev_heading=0;
+#define ID 1
 
-#define ID 2
+#define Axel_length 7.4
 
 #define KP 7
 #define KD 0.001
@@ -365,42 +364,25 @@ void ResetEnc()
 }
 
 void UpdatePosition(){
-  /*float distance_moved = counterAVG*Distance_constant;
-  ypos += distance_moved *cos((MATH_PI/180)*(heading));
-  xpos += distance_moved * sin((MATH_PI/180)*heading);
-
-  //uncomment again when debugging is done
-  counterL=0;
-  counterR=0;
-  counterAVG=0;*/
-
   float Vr,Vl;
   Vr = (counterR*Distance_constant)/POSITION_UPDATE;
   Vl = -(counterL*Distance_constant)/POSITION_UPDATE;
   float distance_moved = counterAVG*Distance_constant;
   float R = (Axel_length/2)*((Vl+Vr)/(Vr-Vl));
   float w = (Vr-Vl)/Axel_length;
-  float heading_chg=heading-prev_heading;
-  float ICCx = xpos - (R*sin((MATH_PI/180)*(270-heading)));
-  float ICCy = ypos + (R*cos((MATH_PI/180)*(270-heading)));
-  if (Vr==Vl){
-    ypos += distance_moved *cos((MATH_PI/180)*(heading));
-    xpos += distance_moved * sin((MATH_PI/180)*heading);
-  }
-  else{
+  float ICCx = xpos - (R*sin((MATH_PI/180)*heading));
+  float ICCy = ypos - (R*cos((MATH_PI/180)*heading));
 
-    //xpos = ((cos(w*POSITION_UPDATE))*(xpos - ICCx))+((-sin(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCx;
-    //ypos = ((sin(w*POSITION_UPDATE))*(xpos - ICCx))+((cos(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCy;
-    xpos = ((cos((MATH_PI/180)*heading_chg))*(xpos - ICCx))+(-sin((MATH_PI/180)*heading_chg)*(ypos - ICCy))+ ICCx;
-    ypos = ((sin((MATH_PI/180)*heading_chg))*(xpos - ICCx))+(cos((MATH_PI/180)*heading_chg)*(ypos - ICCy))+ ICCy;
-    
-  }
- 
+  xpos = ((cos(w*POSITION_UPDATE))*(xpos - ICCx))+((-sin(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCx;
+  ypos = ((sin(w*POSITION_UPDATE))*(xpos - ICCx))+((cos(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCy;
+  
+  //ypos += distance_moved *cos((MATH_PI/180)*(heading));
+  //xpos += distance_moved * sin((MATH_PI/180)*heading);
+
   //uncomment again when debugging is done
   counterL=0;
   counterR=0;
   counterAVG=0;
-  prev_heading=heading;
 }
 
 void forward(){

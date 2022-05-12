@@ -1,9 +1,9 @@
 #include "esp-now_helper.h"		
 
 //add controller address
-uint8_t slaveAddress1[] = {0x94,0x3C,0xC6,0x08,0x13,0x04};
-uint8_t slaveAddress2[] = {0x30,0x83,0x98,0x53,0xBB,0x24};//{0x7C,0x9E,0xBD,0x48,0xAD,0x64}; 
-uint8_t slaveAddress3[] = {0x7C,0x9E,0xBD,0x48,0xB5,0x04};
+uint8_t slaveAddress1[] = {0x30,0x83,0x98,0x53,0xBB,0x24};//{0x94,0x3C,0xC6,0x08,0x13,0x04};
+uint8_t slaveAddress2[] = {0x94,0x3C,0xC6,0x08,0x13,0x04};//{0x30,0x83,0x98,0x53,0xBB,0x24};//{0x7C,0x9E,0xBD,0x48,0xAD,0x64}; 
+uint8_t slaveAddress3[] = {0x94,0x3C,0xC6,0x05,0xF0,0xB8};//{0x7C,0x9E,0xBD,0x48,0xB5,0x04};
 uint8_t contrAddress[] =  {0x7C,0x9E,0xBD,0x49,0x00,0x04};  //{0x94,0x3C,0xC6,0x08,0x13,0x04};
 
 uint8_t masterAddress[] = {0x84,0xCC,0xA8,0x01,0x03,0x20};//slave 1 master test//--> master 1{0x84,0xCC,0xA8,0x01,0x03,0x20};//{0x30,0x83,0x98,0x53,0xBB,0x24}; //(robot 1)//{0x84,0xCC,0xA8,0x01,0x03,0x20}; (silver cable)
@@ -55,10 +55,10 @@ void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len
   //copy received data into own struct 
   memcpy(&rec_slave, incomingData, sizeof(rec_slave));
 
-  if (rec_slave.id == 4) {
+  if (rec_slave.id == CONTROLLER_ID) {
     send_slave.x = rec_slave.err; //movement command
 	/* Serial.println(send_slave.x); */
-	x = send_slave.x;
+	x = send_slave.x; //pls uncomment
   }
 
   //updating data
@@ -68,6 +68,11 @@ void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len
     send_slave.allxpos[rec_slave.id] = rec_slave.xpos; 
     send_slave.allypos[rec_slave.id] = rec_slave.ypos;
 	
+	g += 1;
+	/* if (rec_slave.id == 4) {
+		g += 1;
+	} */
+	
 	//copy data from incoming to data struct
   /* memcpy(&send_slave, incomingData, sizeof(send_slave));
   memcpy(allerro, send_slave.allerr, sizeof(send_slave.allerr));
@@ -75,7 +80,7 @@ void recfromslave(const uint8_t * mac_addr, const uint8_t *incomingData, int len
   memcpy(allxposi, send_slave.allxpos, sizeof(send_slave.allxpos));
   memcpy(allyposi, send_slave.allypos, sizeof(send_slave.allypos)); */
   
-  g += 1; //can delete
+  
   }
 }
 
@@ -155,7 +160,7 @@ void recfrommaster(const uint8_t * mac, const uint8_t *incoming, int len) {
   memcpy(allxposi, rec_master.allxpos, sizeof(rec_master.allxpos));
   memcpy(allyposi, rec_master.allypos, sizeof(rec_master.allypos));
 
-  x = rec_master.x; //movement
+  x = rec_master.x; //movement //pls uncomment
   /* Serial.println(x); */
   
   //allheadi[0] = rec_master.allhead[0];
@@ -166,6 +171,7 @@ void recfrommaster(const uint8_t * mac, const uint8_t *incoming, int len) {
 void send2master(const uint8_t *mac, esp_now_send_status_t status) {
 //  Serial.print("\r\nLast Packet Send Status:\t");
 //  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+	g += 1;
 }
 
 void setup_esp_now_slave()
@@ -260,7 +266,8 @@ void controller_send() {
   circle = digitalRead(19);
   cross = digitalRead(5);
 
-  send_master.id = 4; //for controller
+  //send_master.id = 4; //for controller uncomment later - debugging
+  send_master.id = CONTROLLER_ID;
     
   if (up == HIGH){
     send_master.err = 'U'; //send_master.err

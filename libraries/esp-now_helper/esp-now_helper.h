@@ -1,7 +1,8 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-#define SEND_DELAY 150
+#define SEND_DELAY 150 //150
+#define CONTROLLER_ID 1
 
 
 //structure to hold data to send - can create more structures if different data is to be sent

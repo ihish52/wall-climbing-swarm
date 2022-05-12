@@ -3,6 +3,7 @@
 //extern variables in the esp-now_helper library
 float allxposi[5], allyposi[5], allerro[5], allheadi[5];
 char x;
+int g;
 //int d;
 
 long print_timer = millis();
@@ -20,6 +21,8 @@ void loop() {
 
   if (millis() - print_timer > PRINT_TIME)
   {
+
+
     Serial.println("Master (0):");
     Serial.print("xy: ");
     Serial.print(allxposi[0]);
@@ -35,7 +38,7 @@ void loop() {
     Serial.println();
     Serial.println();
 
-    Serial.println("Slave (1):");
+    /*Serial.println("Slave (1):");
     Serial.print("xy: ");
     Serial.print(allxposi[1]);
     Serial.print(" , ");
@@ -46,6 +49,51 @@ void loop() {
     Serial.println(x);
     Serial.print("err: ");
     Serial.println(allerro[1]);
+
+    Serial.println();
+    Serial.println();*/
+
+    Serial.println("Slave (2):");
+    Serial.print("xy: ");
+    Serial.print(allxposi[2]);
+    Serial.print(" , ");
+    Serial.println(allyposi[2]);
+    Serial.print("heading: ");
+    Serial.println(allheadi[2]);
+    Serial.print("cmd: ");
+    Serial.println(x);
+    Serial.print("err: ");
+    Serial.println(allerro[2]);
+
+    Serial.println();
+    Serial.println();
+
+    /*Serial.println("Slave (3):");
+    Serial.print("xy: ");
+    Serial.print(allxposi[3]);
+    Serial.print(" , ");
+    Serial.println(allyposi[3]);
+    Serial.print("heading: ");
+    Serial.println(allheadi[3]);
+    Serial.print("cmd: ");
+    Serial.println(x);
+    Serial.print("err: ");
+    Serial.println(allerro[3]);
+
+    Serial.println();
+    Serial.println();*/
+
+    Serial.println("Slave (4):");
+    Serial.print("xy: ");
+    Serial.print(allxposi[4]);
+    Serial.print(" , ");
+    Serial.println(allyposi[4]);
+    Serial.print("heading: ");
+    Serial.println(allheadi[4]);
+    Serial.print("cmd: ");
+    Serial.println(x);
+    Serial.print("err: ");
+    Serial.println(g); //allerro[4]
 
     Serial.println();
     Serial.println();

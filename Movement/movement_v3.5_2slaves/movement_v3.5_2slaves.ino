@@ -165,6 +165,10 @@ void loop() {
 
     print_enc();
 
+    //debugging
+    Serial.print("Receiving from slaves: ");
+    Serial.println(g);
+
     print_timer = millis();
   }
 
@@ -288,12 +292,12 @@ void loop() {
     position_timer = millis();
   }
 
-  if (abs(counterL) > abs(counterR)) driveL = constrain(driveL - ((abs(counterL) - abs(counterR))*Kt), -255, 255);
-  else if (abs(counterR) > abs(counterL)) driveR = constrain(driveR - ((abs(counterR) - abs(counterL))*Kt), -255, 255);
+  //if (abs(counterL) > abs(counterR)) driveL = constrain(driveL - ((abs(counterL) - abs(counterR))*Kt), -255, 255);
+  //else if (abs(counterR) > abs(counterL)) driveR = constrain(driveR - ((abs(counterR) - abs(counterL))*Kt), -255, 255);
 
-  Serial.println("HERE");
-  Serial.println(counterL);
-  Serial.println(counterR);
+  //Serial.println("HERE");
+  //Serial.println(counterL);
+  //Serial.println(counterR);
 
   motorL.drive(driveL);
   motorR.drive(driveR);

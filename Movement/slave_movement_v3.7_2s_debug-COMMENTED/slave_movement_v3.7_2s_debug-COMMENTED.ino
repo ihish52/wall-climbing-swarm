@@ -12,10 +12,9 @@
 #include "Wire.h"
 #endif
 
-#define Axel_length 14//7.4
-float prev_heading=0;
-
 #define ID 2
+
+int test_val = 1;
 
 #define KP 7
 #define KD 0.001
@@ -27,8 +26,8 @@ float prev_heading=0;
 #define Distance_constant Distance_measure/Encoder_ticks
 #define MATH_PI 3.141592653589793
 
-#define MAX_ROBOT_NUM 2
-#define CALIBRATE_DIST 15
+#define MAX_ROBOT_NUM 3
+#define CALIBRATE_DIST 25
 
 #define PRINT_TIME 1000
 
@@ -37,7 +36,7 @@ float prev_heading=0;
 #define FIF_TICKS 50
 #define BUTTON_COOLDOWN 3000
 
-#define FTL_STOP_DIST 20
+#define FTL_STOP_DIST 15
 
 #define CLUSTER_CLR 20
 
@@ -50,6 +49,8 @@ float Kt = KT;
 
 //FTL variables
 bool FTL = false;
+float slave_dist[MAX_ROBOT_NUM - 1] = {CALIBRATE_DIST, CALIBRATE_DIST};
+void getSlaveDist();
 
 //FIF variables
 bool FIF = true;
@@ -73,7 +74,7 @@ long position_timer = millis();
 long print_timer = millis();
 
 //calibration variables
-bool calibrate = true;
+bool calibrate = false;
 float positions[4][4] = {{0,0,0,0},{-1,-1,-1,-1},{-1,-1,-1,-1},{-1,-1,-1,-1}};
 uint32_t calibrate_timer = millis();
 int test_counter = 1;
@@ -162,19 +163,23 @@ void loop() {
   
   if (millis() - print_timer > PRINT_TIME)
   {
-    Serial.print("input:");
+    /*Serial.print("input:");
     Serial.println(x);
     Serial.print("xpos: ");
     Serial.print(xpos); //xpos
     Serial.print(" ypos: ");
     Serial.print(ypos);
 
-    print_enc();
+    Serial.print("Sending to master: ");
+    Serial.println(g);*/
+
+    //print_enc();
 
     print_timer = millis();
   }
   
-  slave_send(ID, m_s_dist, heading, xpos, ypos);
+  slave_send(ID, test_val, heading, xpos, ypos);//(ID, 9,10,11,12);
+  test_val++;
 
   //calculate average of encoder counters LR
   counterAVG = ((counterR)-(counterL))/2.0;
@@ -208,11 +213,11 @@ void loop() {
     if (millis() - calibrate_timer > 3000){
       //check y position of each robot
       //initialize slave y positions with -1
-      if (allyposi[0] == -1 || allyposi[MAX_ROBOT_NUM-1] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
+      if (allyposi[0] == -1 || allyposi[2] == 0 || allyposi[4] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
       {
-        Serial.println("HERE");
-        Serial.println(allyposi[0]);
-        Serial.println(allyposi[1]);
+        //Serial.println("HERE");
+        //Serial.println(allyposi[0]);
+        //Serial.println(allyposi[1]);
         
         current_state=FORWARD;
         forward();
@@ -223,7 +228,7 @@ void loop() {
         stopp();
         ResetEnc();
 
-        if (allyposi[MAX_ROBOT_NUM-1] != 0 && allyposi[MAX_ROBOT_NUM-1] != -1) calibrate = false;
+        if (allyposi[4] != 0 && allyposi[4] != -1) calibrate = false;
 
         //positions[test_counter+1][1] = 0;
         test_counter++;   
@@ -282,7 +287,8 @@ void loop() {
 
     heading_ref = m_s_heading;
 
-    if (m_s_dist<= FTL_STOP_DIST)
+    if (slave_dist[0] <= FTL_STOP_DIST || slave_dist[MAX_ROBOT_NUM-2] <= FTL_STOP_DIST)
+    //if (m_s_dist<= FTL_STOP_DIST)
     {
       current_state=STOP;
       stopp();
@@ -311,8 +317,7 @@ void loop() {
 
     //Serial.println(heading_ref);
 
-    //if (abs(allxposi[0] - allxposi[ID]) < CLUSTER_CLR && abs(allyposi[0] - allyposi[ID]) < CLUSTER_CLR)
-    if (m_s_dist<= CLUSTER_CLR)
+    if (slave_dist[0] <= FTL_STOP_DIST || slave_dist[MAX_ROBOT_NUM-2] <= FTL_STOP_DIST)
     {
       current_state=STOP;
       stopp();
@@ -331,6 +336,8 @@ void loop() {
   }
 
   previnput=input;
+
+  getSlaveDist();
 
   turn();
 
@@ -356,6 +363,25 @@ void loop() {
 
 }
 
+//get distance of current slave to all other slaves and master
+void getSlaveDist()
+{
+
+  for (int i = 0; i < MAX_ROBOT_NUM; i++)
+  {
+    if (i == ID) continue;
+
+    float y_dist = allyposi[i] - allyposi[ID];
+    float x_dist = allxposi[i] - allxposi[ID];
+
+    float xy_dist = sqrt(pow(x_dist,2)+pow(y_dist,2));
+
+    slave_dist[i] = xy_dist;
+
+  }
+
+}
+
 //reset encoders after turning without updating position
 void ResetEnc()
 {
@@ -365,42 +391,14 @@ void ResetEnc()
 }
 
 void UpdatePosition(){
-  /*float distance_moved = counterAVG*Distance_constant;
+  float distance_moved = counterAVG*Distance_constant;
   ypos += distance_moved *cos((MATH_PI/180)*(heading));
   xpos += distance_moved * sin((MATH_PI/180)*heading);
 
   //uncomment again when debugging is done
   counterL=0;
   counterR=0;
-  counterAVG=0;*/
-
-  float Vr,Vl;
-  Vr = (counterR*Distance_constant)/POSITION_UPDATE;
-  Vl = -(counterL*Distance_constant)/POSITION_UPDATE;
-  float distance_moved = counterAVG*Distance_constant;
-  float R = (Axel_length/2)*((Vl+Vr)/(Vr-Vl));
-  float w = (Vr-Vl)/Axel_length;
-  float heading_chg=heading-prev_heading;
-  float ICCx = xpos - (R*sin((MATH_PI/180)*(270-heading)));
-  float ICCy = ypos + (R*cos((MATH_PI/180)*(270-heading)));
-  if (Vr==Vl){
-    ypos += distance_moved *cos((MATH_PI/180)*(heading));
-    xpos += distance_moved * sin((MATH_PI/180)*heading);
-  }
-  else{
-
-    //xpos = ((cos(w*POSITION_UPDATE))*(xpos - ICCx))+((-sin(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCx;
-    //ypos = ((sin(w*POSITION_UPDATE))*(xpos - ICCx))+((cos(w*POSITION_UPDATE))*(ypos - ICCy))+ ICCy;
-    xpos = ((cos((MATH_PI/180)*heading_chg))*(xpos - ICCx))+(-sin((MATH_PI/180)*heading_chg)*(ypos - ICCy))+ ICCx;
-    ypos = ((sin((MATH_PI/180)*heading_chg))*(xpos - ICCx))+(cos((MATH_PI/180)*heading_chg)*(ypos - ICCy))+ ICCy;
-    
-  }
- 
-  //uncomment again when debugging is done
-  counterL=0;
-  counterR=0;
   counterAVG=0;
-  prev_heading=heading;
 }
 
 void forward(){
