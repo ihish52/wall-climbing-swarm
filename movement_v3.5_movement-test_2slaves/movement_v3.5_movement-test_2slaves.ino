@@ -205,7 +205,7 @@ void loop() {
     if (millis() - calibrate_timer > 3000){
       //check y position of each robot
       //initialize slave y positions with -1
-      if (send_slave.allypos[0] == 0 || send_slave.allypos[MAX_ROBOT_NUM-2] == 0 || send_slave.allypos[MAX_ROBOT_NUM-1] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
+      if (NEW FEATURE NEW FEATURE ALGO[0] == 0 || send_slave.allypos[MAX_ROBOT_NUM-2] == 0 || send_slave.allypos[MAX_ROBOT_NUM-1] == 0)// || allyposi[2] == 0 || allyposi[3] == 0) 
       {
         //Serial.println("HERE");
         //Serial.println(send_slave.allypos[0]);
@@ -229,6 +229,12 @@ void loop() {
       }
       
     }
+	
+	if (ADDITIONAL CODE)
+	{
+		NEW CODE HERE
+		NEW CODE HERE
+	}
   }
 
   //MASTER FIF code - master does not need this flag true as code is empty
